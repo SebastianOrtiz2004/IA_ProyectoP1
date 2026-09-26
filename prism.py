@@ -134,11 +134,11 @@ def seleccionar_regla_ganadora_prism(candidatas, semilla=42):
 
 def ejecutar_prism(datos_entrenamiento, clase_objetivo='Dropout', semilla=42, min_cobertura=10, **kwargs):
     """
-    Ejecuta el Algoritmo PRISM en su formulación académica estricta (Diapositivas 18 a 29):
+    Ejecuta el Algoritmo PRISM en su formulación algorítmica canónica:
     Construye UNA SOLA REGLA COMPUESTA GANADORA a través de iteraciones sucesivas
     (1 variable añadida por iteración), evaluando todas las candidatas y seleccionando
     el mejor par atributo-valor con [*].
-    Condición de parada del MIENTRAS (Diapositiva 29):
+    Condición de parada del MIENTRAS:
       MIENTRAS (regla cubre algún ejemplo negativo AND Atributos ≠ ∅)
       En el momento en que la regla alcanza Confianza = 100.0% (0 ejemplos negativos cubiertos),
       la condición del MIENTRAS se evalúa como FALSO y el algoritmo concluye devolviendo la regla.
