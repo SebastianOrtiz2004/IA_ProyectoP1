@@ -54,3 +54,54 @@ def partir_dataset(lista_estudiantes, porcentaje_entrenamiento=0.80, semilla=42)
         datos_prueba.append(lista_estudiantes[i])
 
     return datos_entrenamiento, datos_prueba
+
+
+def obtener_muestra_estratificada(lista_estudiantes, tam_muestra=400, columna_clase='Target', semilla=42, retornar_cuotas=False):
+    """
+    Extrae una submuestra representativa mediante Muestreo Estratificado (Stratified Sampling).
+    Garantiza que la proporción de cada clase ('Dropout', 'Graduate', 'Enrolled') en la
+    submuestra sea exactamente proporcional a su distribución en la población original,
+    evitando sesgos de muestreo en el cálculo de aptitud (fitness) del Algoritmo Genético.
+
+    Parámetros:
+      - lista_estudiantes: lista completa de estudiantes (ej. conjunto de entrenamiento).
+      - tam_muestra: tamaño objetivo de la muestra (ej. 400).
+      - columna_clase: nombre de la columna objetivo ('Target').
+      - semilla: semilla aleatoria para reproducibilidad experimental.
+      - retornar_cuotas: booleano; si es True retorna tupla (muestra, dict_cuotas).
+    """
+    if tam_muestra >= len(lista_estudiantes):
+        cuotas = {}
+        for e in lista_estudiantes:
+            c = e.get(columna_clase, 'Desconocido')
+            cuotas[c] = cuotas.get(c, 0) + 1
+        return (list(lista_estudiantes), cuotas) if retornar_cuotas else list(lista_estudiantes)
+
+    rng = random.Random(semilla)
+    estratos = {}
+    for est in lista_estudiantes:
+        clase = est.get(columna_clase, 'Desconocido')
+        estratos.setdefault(clase, []).append(est)
+
+    total_poblacion = len(lista_estudiantes)
+    cuotas = {}
+    for clase, grupo in estratos.items():
+        proporcion = len(grupo) / total_poblacion
+        cuotas[clase] = int(round(proporcion * tam_muestra))
+
+    # Ajuste por redondeo si la suma difiere ligeramente de tam_muestra
+    diferencia = tam_muestra - sum(cuotas.values())
+    if diferencia != 0:
+        clase_mayoritaria = max(estratos.keys(), key=lambda c: len(estratos[c]))
+        cuotas[clase_mayoritaria] += diferencia
+
+    muestra = []
+    for clase, grupo in estratos.items():
+        grupo_copia = list(grupo)
+        rng.shuffle(grupo_copia)
+        muestra.extend(grupo_copia[:cuotas[clase]])
+
+    rng.shuffle(muestra)
+    if retornar_cuotas:
+        return muestra, cuotas
+    return muestra

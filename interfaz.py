@@ -695,27 +695,23 @@ class AplicacionDesercion:
 
         frame_g1 = ttk.LabelFrame(frame_graficos, text="Variable 1: Nota de Admisión (0 a 200 puntos)")
         frame_g1.pack(fill=tk.BOTH, expand=True, pady=3)
-        self.canvas_g1 = tk.Canvas(frame_g1, bg="white", height=130)
-        self.canvas_g1.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.canvas_g1 = tk.Canvas(frame_g1, bg="white", height=140)
+        self.canvas_g1.pack(fill=tk.BOTH, expand=True, padx=5, pady=4)
+        self.canvas_g1.bind("<Configure>", lambda e: self.dibujar_funciones_pertenencia())
 
         frame_g2 = ttk.LabelFrame(frame_graficos, text="Variable 2: Materias Aprobadas 1er Semestre (0 a 26 materias)")
         frame_g2.pack(fill=tk.BOTH, expand=True, pady=3)
-        self.canvas_g2 = tk.Canvas(frame_g2, bg="white", height=130)
-        self.canvas_g2.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.canvas_g2 = tk.Canvas(frame_g2, bg="white", height=140)
+        self.canvas_g2.pack(fill=tk.BOTH, expand=True, padx=5, pady=4)
+        self.canvas_g2.bind("<Configure>", lambda e: self.dibujar_funciones_pertenencia())
 
         frame_g3 = ttk.LabelFrame(frame_graficos, text="Variable 3: Promedio de Calificaciones 1er Semestre (0 a 20 puntos)")
         frame_g3.pack(fill=tk.BOTH, expand=True, pady=3)
-        self.canvas_g3 = tk.Canvas(frame_g3, bg="white", height=130)
-        self.canvas_g3.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.canvas_g3 = tk.Canvas(frame_g3, bg="white", height=140)
+        self.canvas_g3.pack(fill=tk.BOTH, expand=True, padx=5, pady=4)
+        self.canvas_g3.bind("<Configure>", lambda e: self.dibujar_funciones_pertenencia())
 
-        # Subpestaña 2: Fundamento Teórico y Fórmulas de los 4 Pasos Canónicos
-        frame_teoria = ttk.Frame(notebook_funciones)
-        notebook_funciones.add(frame_teoria, text=" Los 4 Pasos del Motor Difuso (Fundamento Teórico y Fórmulas) ")
-        self.txt_teoria_difusa = scrolledtext.ScrolledText(frame_teoria, font=("Courier", 10))
-        self.txt_teoria_difusa.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
-        self.cargar_guia_teorica_difusa()
-
-        # Subpestaña 3: Puntos de Corte Calibrados por el Algoritmo Genético (19 Genes)
+        # Subpestaña 2: Puntos de Corte Calibrados por el Algoritmo Genético (19 Genes)
         frame_cortes = ttk.Frame(notebook_funciones)
         notebook_funciones.add(frame_cortes, text=" Puntos de Corte Calibrados por el AG (19 Genes) ")
         self.txt_cortes_difusos = scrolledtext.ScrolledText(frame_cortes, font=("Courier", 10))
@@ -725,54 +721,12 @@ class AplicacionDesercion:
         self.ventana.after(100, self.dibujar_funciones_pertenencia)
 
     def cargar_guia_teorica_difusa(self):
-        """Carga la guía formal y matemática de los 4 pasos canónicos del motor difuso Mamdani."""
-        if not hasattr(self, 'txt_teoria_difusa'):
-            return
-        self.txt_teoria_difusa.config(state=tk.NORMAL)
-        self.txt_teoria_difusa.delete('1.0', tk.END)
-        texto = (
-            "=" * 95 + "\n"
-            "       GUÍA TEÓRICA Y METODOLÓGICA: LOS 4 PASOS DEL MOTOR DIFUSO MAMDANI\n"
-            "=" * 95 + "\n\n"
-            "[PASO 1: FUZZIFICACIÓN (TRANSFORMACIÓN A GRADOS DE MEMBRESÍA μ)]\n"
-            "---------------------------------------------------------------------------------------\n"
-            "• Objetivo: Transformar variables numéricas continuas (crisp) en grados de pertenencia μ ∈ [0, 1].\n"
-            "• Geometría implementada (100% matemática analítica sin librerías externas):\n"
-            "    - Función Trapezoidal(x; a, b, c, d):\n"
-            "        μ(x) = 0                       si x <= a o x >= d\n"
-            "        μ(x) = (x - a) / (b - a)       si a < x < b  (pendiente ascendente)\n"
-            "        μ(x) = 1.0                     si b <= x <= c (meseta de certeza total)\n"
-            "        μ(x) = (d - x) / (d - c)       si c < x < d  (pendiente descendente)\n"
-            "    - Función Triangular(x; a, b, c):\n"
-            "        μ(x) = 0                       si x <= a o x >= c\n"
-            "        μ(x) = (x - a) / (b - a)       si a < x < b\n"
-            "        μ(x) = (c - x) / (c - b)       si b <= x < c\n\n"
-            "[PASO 2: EVALUACIÓN DE REGLAS E INFERENCIA DIFUSA (T-NORMA MÍNIMO)]\n"
-            "---------------------------------------------------------------------------------------\n"
-            "• Objetivo: Determinar la fuerza de activación de cada regla difusa en la base de conocimiento.\n"
-            "• Operador T-Norma de Mamdani (Conjunción AND):\n"
-            "    α_r = min( μ_A(x_1), μ_B(x_2), μ_C(x_3) )\n"
-            "• Cada regla evaluada trunca el conjunto difuso consecuente correspondiente a la altura α_r.\n\n"
-            "[PASO 3: AGREGACIÓN DE CONSECUENTES (S-NORMA MÁXIMO)]\n"
-            "---------------------------------------------------------------------------------------\n"
-            "• Objetivo: Combinar las consecuencias de todas las reglas activadas en una única región difusa global.\n"
-            "• Operador S-Norma de Mamdani (Disyunción OR):\n"
-            "    μ_agregada(y) = max( α_1, α_2, ..., α_k ) para cada valor de salida y ∈ [0.0, 1.0].\n"
-            "• Genera la superficie geométrica difusa envolvente de todos los consecuentes activados.\n\n"
-            "[PASO 4: DEFUZZIFICACIÓN POR CENTRO DE GRAVEDAD (CENTROIDE - COG)]\n"
-            "---------------------------------------------------------------------------------------\n"
-            "• Objetivo: Extraer un único valor escalar cuantitativo y* ∈ [0.0, 1.0] representativo.\n"
-            "• Fórmula del Centro de Gravedad Discreto (100 puntos de muestreo en el dominio [0.0, 1.0]):\n"
-            "              Σ [ y_j · μ_agregada(y_j) ]     Momento Total del Área\n"
-            "        y* = ----------------------------- = ------------------------\n"
-            "                   Σ [ μ_agregada(y_j) ]         Área Total Agregada\n\n"
-            "• Criterio de Clasificación Final:\n"
-            "    - Si y* >= 0.50 (50.0%) -> Estudiante clasificado en Alto Riesgo de Deserción ('Dropout').\n"
-            "    - Si y* <  0.50 (50.0%) -> Estudiante clasificado con Continuidad ('No Dropout').\n"
-            "=" * 95 + "\n"
-        )
-        self.txt_teoria_difusa.insert(tk.END, texto)
-        self.txt_teoria_difusa.config(state=tk.DISABLED)
+        """Redirige al diagnóstico explicable del estudiante para compatibilidad."""
+        self.cargar_ejemplo_clase('Dropout')
+
+    def mostrar_demostracion_caso_real(self, clase_objetivo='Dropout'):
+        """Carga y diagnostica el caso en Pestaña 4 para compatibilidad."""
+        self.cargar_ejemplo_clase(clase_objetivo)
 
     def dibujar_conjunto_en_canvas(self, canvas, puntos, tipo, color, x_min, x_max, etiqueta):
         ancho = canvas.winfo_width()
@@ -834,24 +788,185 @@ class AplicacionDesercion:
         canvas.create_text(ancho - margen_x, alto - 10, text=str(x_max), font=("Arial", 8))
         canvas.create_text(ancho // 2, alto - 10, text=titulo_eje, font=("Arial", 8, "italic"))
 
+    def dibujar_variable_difusa_completa(self, canvas, x_min, x_max, titulo_eje, conjuntos):
+        """
+        Dibuja los conjuntos difusos de una variable con ejes, rejilla, líneas guía verticales,
+        puntos de corte explícitos con valores numéricos rotulados en el eje X y ficha técnica de genes.
+        """
+        canvas.delete("all")
+        ancho = canvas.winfo_width()
+        alto = canvas.winfo_height()
+        if ancho < 60 or alto < 50:
+            return
+
+        margen_izq = 55
+        margen_der = 45
+        margen_arr = 26
+        margen_abj = 38
+        ancho_util = ancho - margen_izq - margen_der
+        alto_util = alto - margen_arr - margen_abj
+        if ancho_util <= 10 or alto_util <= 10:
+            return
+
+        def escala_x(val):
+            return margen_izq + ((val - x_min) / float(x_max - x_min)) * ancho_util
+
+        def escala_y(mu):
+            return (alto - margen_abj) - mu * alto_util
+
+        # 1. Fondo blanco y rejilla cartesiana tenue
+        canvas.create_rectangle(0, 0, ancho, alto, fill="#ffffff", outline="")
+
+        canvas.create_line(margen_izq, escala_y(0.5), ancho - margen_der, escala_y(0.5), fill="#f1f5f9", dash=(2, 4))
+        canvas.create_line(margen_izq, escala_y(1.0), ancho - margen_der, escala_y(1.0), fill="#e2e8f0", dash=(2, 4))
+
+        # Ejes principales
+        canvas.create_line(margen_izq, escala_y(0.0), ancho - margen_der, escala_y(0.0), fill="#475569", width=1.5)
+        canvas.create_line(margen_izq, margen_arr, margen_izq, escala_y(0.0), fill="#475569", width=1.5)
+
+        # Etiquetas del eje Y
+        canvas.create_text(margen_izq - 12, escala_y(1.0), text="1.0", font=("Arial", 7), fill="#64748b")
+        canvas.create_text(margen_izq - 12, escala_y(0.5), text="0.5", font=("Arial", 7), fill="#94a3b8")
+        canvas.create_text(margen_izq - 12, escala_y(0.0), text="0.0", font=("Arial", 7), fill="#64748b")
+        canvas.create_text(margen_izq - 32, margen_arr + alto_util // 2, text="μ", font=("Arial", 8, "bold"), fill="#1e293b")
+
+        # Título del eje X
+        canvas.create_text(margen_izq + ancho_util // 2, alto - 8, text=titulo_eje, font=("Arial", 8, "italic"), fill="#334155")
+
+        # Extremos del eje X
+        canvas.create_text(margen_izq, escala_y(0.0) + 11, text=str(x_min), font=("Arial", 8, "bold"), fill="#1e293b")
+        canvas.create_text(ancho - margen_der, escala_y(0.0) + 11, text=str(x_max), font=("Arial", 8, "bold"), fill="#1e293b")
+
+        puntos_corte_raw = []
+        resumen_texto_partes = []
+
+        # 2. Dibujar cada conjunto difuso y recolectar puntos de corte
+        for puntos, tipo, color, etiqueta in conjuntos:
+            if tipo == 'trapecio':
+                a, b, c, d = puntos
+                coords = [
+                    (escala_x(a), escala_y(0.0)),
+                    (escala_x(b), escala_y(1.0)),
+                    (escala_x(c), escala_y(1.0)),
+                    (escala_x(d), escala_y(0.0))
+                ]
+                x_etiqueta = escala_x((b + c) / 2.0)
+                if b > x_min + 0.001:
+                    puntos_corte_raw.append((b, color, 1.0, f"{etiqueta}_b"))
+                if c < x_max - 0.001:
+                    puntos_corte_raw.append((c, color, 1.0, f"{etiqueta}_c"))
+                if d < x_max - 0.001 and d > x_min + 0.001:
+                    puntos_corte_raw.append((d, color, 0.0, f"{etiqueta}_d"))
+                if a > x_min + 0.001:
+                    puntos_corte_raw.append((a, color, 0.0, f"{etiqueta}_a"))
+
+                fmt_vals = f"[{puntos[0]:.1f}, {puntos[1]:.1f}, {puntos[2]:.1f}, {puntos[3]:.1f}]"
+                resumen_texto_partes.append(f"{etiqueta}: {fmt_vals}")
+
+            else:  # triangulo
+                a, b, c = puntos
+                coords = [
+                    (escala_x(a), escala_y(0.0)),
+                    (escala_x(b), escala_y(1.0)),
+                    (escala_x(c), escala_y(0.0))
+                ]
+                x_etiqueta = escala_x(b)
+                if a > x_min + 0.001:
+                    puntos_corte_raw.append((a, color, 0.0, f"{etiqueta}_a"))
+                if x_min + 0.001 < b < x_max - 0.001:
+                    puntos_corte_raw.append((b, color, 1.0, f"{etiqueta}_b"))
+                if c < x_max - 0.001:
+                    puntos_corte_raw.append((c, color, 0.0, f"{etiqueta}_c"))
+
+                fmt_vals = f"[{puntos[0]:.1f}, {puntos[1]:.1f}, {puntos[2]:.1f}]"
+                resumen_texto_partes.append(f"{etiqueta}: {fmt_vals}")
+
+            # Trazo de la curva difusa
+            for i in range(len(coords) - 1):
+                canvas.create_line(coords[i][0], coords[i][1], coords[i+1][0], coords[i+1][1], fill=color, width=2.5)
+
+            # Rótulo de la etiqueta ("Baja", "Media", etc.)
+            canvas.create_text(x_etiqueta, escala_y(1.0) - 10, text=etiqueta, font=("Arial", 9, "bold"), fill=color)
+
+            # Dibujar líneas verticales y puntos en los vértices del conjunto
+            for pt_x_val, pt_y_mu in [(puntos[i], 1.0 if (tipo=='trapecio' and i in (1,2)) or (tipo=='triangulo' and i==1) else 0.0)
+                                      for i in range(len(puntos))]:
+                if x_min + 0.001 < pt_x_val < x_max - 0.001:
+                    px = escala_x(pt_x_val)
+                    py = escala_y(pt_y_mu)
+                    canvas.create_line(px, py, px, escala_y(0.0), fill=color, dash=(2, 3), width=1.2)
+                    canvas.create_oval(px - 3, py - 3, px + 3, py + 3, fill=color, outline="#ffffff", width=1.5)
+                    if pt_y_mu == 1.0:
+                        canvas.create_text(px, py - 9, text=f"{pt_x_val:.1f}", font=("Arial", 7, "bold"), fill=color)
+
+        # 3. Filtrar y rotular los puntos de corte únicos en el eje X
+        validos = [p for p in puntos_corte_raw if (x_min + 0.001 < p[0] < x_max - 0.001)]
+        validos.sort(key=lambda p: p[0])
+
+        cortes_unicos = []
+        for p in validos:
+            if not cortes_unicos or abs(p[0] - cortes_unicos[-1]['val']) > 0.15:
+                cortes_unicos.append({'val': p[0], 'colores': [p[1]], 'roles': [p[3]]})
+            else:
+                if p[1] not in cortes_unicos[-1]['colores']:
+                    cortes_unicos[-1]['colores'].append(p[1])
+                cortes_unicos[-1]['roles'].append(p[3])
+
+        prev_x_pix = -999
+        prev_level = 0
+        for corte in cortes_unicos:
+            val = corte['val']
+            x_pix = escala_x(val)
+            color_corte = corte['colores'][0] if len(corte['colores']) == 1 else "#334155"
+
+            # Escalonamiento vertical para evitar solapamientos entre números cercanos
+            if abs(x_pix - prev_x_pix) < 36:
+                level = 1 if prev_level == 0 else 0
+            else:
+                level = 0
+            prev_x_pix = x_pix
+            prev_level = level
+
+            # Ticks en el eje X
+            y_base = escala_y(0.0)
+            if level == 0:
+                canvas.create_line(x_pix, y_base - 2, x_pix, y_base + 5, fill=color_corte, width=1.5)
+                y_num = y_base + 11
+            else:
+                canvas.create_line(x_pix, y_base - 2, x_pix, y_base + 16, fill=color_corte, width=1.2, dash=(2, 2))
+                y_num = y_base + 22
+
+            texto_corte = f"{int(val)}" if (val == int(val) and x_max <= 26) else f"{val:.1f}"
+            canvas.create_text(x_pix, y_num, text=texto_corte, font=("Arial", 8, "bold"), fill=color_corte)
+
+        # 4. Ficha técnica de resumen de genes en la parte superior derecha
+        texto_resumen = "  |  ".join(resumen_texto_partes)
+        canvas.create_text(ancho - margen_der, 11, anchor=tk.E, text=texto_resumen, font=("Courier", 8, "bold"), fill="#475569")
+
     def dibujar_funciones_pertenencia(self):
-        """Dibuja las funciones difusas calibradas en cada uno de los 3 lienzos."""
+        """Dibuja las funciones difusas calibradas en cada uno de los 3 lienzos con sus puntos de corte explícitos."""
         p = self.parametros_difusos
 
-        self.preparar_ejes_canvas(self.canvas_g1, 0, 200, "Puntaje de Admisión")
-        self.dibujar_conjunto_en_canvas(self.canvas_g1, p['nota_adm_baja'], 'trapecio', "#007acc", 0, 200, "Baja")
-        self.dibujar_conjunto_en_canvas(self.canvas_g1, p['nota_adm_media'], 'triangulo', "#107c41", 0, 200, "Media")
-        self.dibujar_conjunto_en_canvas(self.canvas_g1, p['nota_adm_alta'], 'trapecio', "#d83b01", 0, 200, "Alta")
+        conjuntos_v1 = [
+            (p['nota_adm_baja'], 'trapecio', "#007acc", "Baja"),
+            (p['nota_adm_media'], 'triangulo', "#107c41", "Media"),
+            (p['nota_adm_alta'], 'trapecio', "#d83b01", "Alta")
+        ]
+        self.dibujar_variable_difusa_completa(self.canvas_g1, 0, 200, "Puntaje de Admisión", conjuntos_v1)
 
-        self.preparar_ejes_canvas(self.canvas_g2, 0, 26, "Número de Materias Aprobadas")
-        self.dibujar_conjunto_en_canvas(self.canvas_g2, p['aprobadas_critica'], 'trapecio', "#d83b01", 0, 26, "Crítica")
-        self.dibujar_conjunto_en_canvas(self.canvas_g2, p['aprobadas_regular'], 'triangulo', "#b48b00", 0, 26, "Regular")
-        self.dibujar_conjunto_en_canvas(self.canvas_g2, p['aprobadas_completa'], 'trapecio', "#107c41", 0, 26, "Completa")
+        conjuntos_v2 = [
+            (p['aprobadas_critica'], 'trapecio', "#d83b01", "Crítica"),
+            (p['aprobadas_regular'], 'triangulo', "#b48b00", "Regular"),
+            (p['aprobadas_completa'], 'trapecio', "#107c41", "Completa")
+        ]
+        self.dibujar_variable_difusa_completa(self.canvas_g2, 0, 26, "Número de Materias Aprobadas (1er Semestre)", conjuntos_v2)
 
-        self.preparar_ejes_canvas(self.canvas_g3, 0, 20, "Promedio Semestral")
-        self.dibujar_conjunto_en_canvas(self.canvas_g3, p['nota_sem_deficiente'], 'trapecio', "#d83b01", 0, 20, "Deficiente")
-        self.dibujar_conjunto_en_canvas(self.canvas_g3, p['nota_sem_aceptable'], 'triangulo', "#b48b00", 0, 20, "Aceptable")
-        self.dibujar_conjunto_en_canvas(self.canvas_g3, p['nota_sem_sobresaliente'], 'trapecio', "#107c41", 0, 20, "Sobresaliente")
+        conjuntos_v3 = [
+            (p['nota_sem_deficiente'], 'trapecio', "#d83b01", "Deficiente"),
+            (p['nota_sem_aceptable'], 'triangulo', "#b48b00", "Aceptable"),
+            (p['nota_sem_sobresaliente'], 'trapecio', "#107c41", "Sobresaliente")
+        ]
+        self.dibujar_variable_difusa_completa(self.canvas_g3, 0, 20, "Promedio Semestral (1er Semestre)", conjuntos_v3)
 
         # Refrescar reporte explicativo de puntos de corte (19 genes)
         self.actualizar_texto_puntos_de_corte()
@@ -872,6 +987,541 @@ class AplicacionDesercion:
         self.txt_cortes_difusos.delete('1.0', tk.END)
         self.txt_cortes_difusos.insert(tk.END, texto)
         self.txt_cortes_difusos.config(state=tk.DISABLED)
+
+    def dibujar_proceso_difuso_4_paneles(self, canvas, nota, aprob, prom, parametros, fuerzas, riesgo_calculado, target_real=None, det=None):
+        """
+        Dibuja el flujo visual Mamdani completo en 4 paneles horizontales conectados por flechas:
+          [1. Input: Admisión] ➔ [2. Input: Aprobadas] ➔ [3. Input: Promedio] ➔ [4. Aggregation & Defuzzify]
+        Refleja exactamente el punto de corte (fuzzificación) de cada variable con líneas y flechas horizontales rosa,
+        el sombreado amarillo de activación, y en el panel 4 la masa agregada (cyan) con el Centroide (púrpura).
+        """
+        ancho = canvas.winfo_width()
+        alto = canvas.winfo_height()
+        if ancho <= 1:
+            try:
+                ancho = int(canvas.cget("width"))
+                alto = int(canvas.cget("height"))
+            except Exception:
+                pass
+        if ancho < 120 or alto < 60:
+            return
+
+        canvas.delete("all")
+        canvas.create_rectangle(0, 0, ancho, alto, fill="#ffffff", outline="")
+
+        # Geometría global de los 4 paneles y conectores
+        m_izq = 8
+        m_der = 8
+        gap = 20
+        w_total_util = ancho - m_izq - m_der - (3 * gap)
+        if w_total_util < 120:
+            return
+        w_panel = w_total_util / 4.0
+
+        pad_l = 24  # Para etiquetas 0.0, 1.0 y cortes mu en eje Y
+        pad_r = 6   # Margen derecho
+        pad_t = 22  # Para títulos y marcadores superiores X1, X2, X3, Centroid
+        pad_b = 26  # Para ticks del eje X y cajas de valor inferiores
+
+        y_top = pad_t
+        y_bottom = alto - pad_b
+        h_box = y_bottom - y_top
+        if h_box < 25:
+            return
+
+        def get_panel_box(idx):
+            xp0 = m_izq + idx * (w_panel + gap)
+            xp1 = xp0 + w_panel
+            bx0 = xp0 + pad_l
+            bx1 = xp1 - pad_r
+            return xp0, xp1, bx0, bx1
+
+        # Flechas rojas conectoras entre paneles (1 ➔ 2 ➔ 3 ➔ 4)
+        for i in range(3):
+            _, xp1, _, _ = get_panel_box(i)
+            next_xp0, _, _, _ = get_panel_box(i + 1)
+            y_mid = (y_top + y_bottom) / 2
+            canvas.create_line(
+                xp1 + 2, y_mid, next_xp0 - 2, y_mid,
+                fill="#d32f2f", width=2.5, arrow=tk.LAST, arrowshape=(6, 8, 3)
+            )
+
+        # Helpers matemáticos de sombreado amarillo para regiones activadas
+        def sombreado_trapecio(px_fn, py_fn, a, b, c, d, mu_corte, x_min_val, x_max_val):
+            if mu_corte <= 0.005:
+                return
+            x_s = max(x_min_val, min(a, b))
+            x_e = min(x_max_val, max(c, d))
+            if x_e <= x_s:
+                return
+            pasos = 30
+            pts = [px_fn(x_s), py_fn(0.0)]
+            for step in range(pasos + 1):
+                xv = x_s + (x_e - x_s) * (step / pasos)
+                mv = pertenencia_trapezoidal(xv, a, b, c, d)
+                pts.extend([px_fn(xv), py_fn(min(mv, mu_corte))])
+            pts.extend([px_fn(x_e), py_fn(0.0)])
+            canvas.create_polygon(pts, fill="#ffeb3b", outline="")
+
+        def sombreado_triangulo(px_fn, py_fn, a, b, c, mu_corte, x_min_val, x_max_val):
+            if mu_corte <= 0.005:
+                return
+            x_s = max(x_min_val, a)
+            x_e = min(x_max_val, c)
+            if x_e <= x_s:
+                return
+            pasos = 30
+            pts = [px_fn(x_s), py_fn(0.0)]
+            for step in range(pasos + 1):
+                xv = x_s + (x_e - x_s) * (step / pasos)
+                mv = pertenencia_triangular(xv, a, b, c)
+                pts.extend([px_fn(xv), py_fn(min(mv, mu_corte))])
+            pts.extend([px_fn(x_e), py_fn(0.0)])
+            canvas.create_polygon(pts, fill="#ffeb3b", outline="")
+
+        def dibujar_flechas_mu(bx0, bx1, py_fn, lista_mus):
+            mus = sorted([m for m in lista_mus if m > 0.01])
+            prev_y = None
+            for mu_val in mus:
+                y_mu = py_fn(mu_val)
+                canvas.create_line(bx0, y_mu, bx1, y_mu, fill="#c2185b", width=1.3, arrow=tk.LAST, arrowshape=(5, 7, 3))
+                y_txt = y_mu
+                if prev_y is not None and abs(y_txt - prev_y) < 10:
+                    y_txt = prev_y - 10
+                canvas.create_text(bx0 - 10, y_txt, text=f"{mu_val:.2f}", font=("Arial", 7, "bold"), fill="#c2185b")
+                prev_y = y_txt
+
+        def dibujar_caja_input(x_pix, y_bot, texto_val):
+            bw = max(26, len(texto_val) * 7 + 4)
+            y_box = y_bot + 12
+            canvas.create_rectangle(x_pix - bw / 2, y_box - 6, x_pix + bw / 2, y_box + 6, outline="#c2185b", fill="#ffffff", width=1.5)
+            canvas.create_text(x_pix, y_box, text=texto_val, font=("Arial", 7, "bold"), fill="#c2185b")
+
+        def py_coord(mu_val):
+            c = max(0.0, min(1.0, mu_val))
+            return y_bottom - c * h_box
+
+        # ---------------------------------------------------------------------
+        # PANEL 1: 1. Input: Admisión [0 a 200]
+        # ---------------------------------------------------------------------
+        _, _, bx0_0, bx1_0 = get_panel_box(0)
+        bw_0 = bx1_0 - bx0_0
+        def px0(x):
+            c = max(0.0, min(200.0, x))
+            return bx0_0 + (c / 200.0) * bw_0
+
+        p_adm_b = parametros.get('nota_adm_baja', [0, 0, 100, 140])
+        p_adm_m = parametros.get('nota_adm_media', [110, 135, 160])
+        p_adm_a = parametros.get('nota_adm_alta', [145, 170, 200, 200])
+
+        mu_adm_b = pertenencia_trapezoidal(nota, p_adm_b[0], p_adm_b[1], p_adm_b[2], p_adm_b[3])
+        mu_adm_m = pertenencia_triangular(nota, p_adm_m[0], p_adm_m[1], p_adm_m[2])
+        mu_adm_a = pertenencia_trapezoidal(nota, p_adm_a[0], p_adm_a[1], p_adm_a[2], p_adm_a[3])
+
+        # Sombreado amarillo en conjuntos activados
+        sombreado_trapecio(px0, py_coord, p_adm_b[0], p_adm_b[1], p_adm_b[2], p_adm_b[3], mu_adm_b, 0, 200)
+        sombreado_triangulo(px0, py_coord, p_adm_m[0], p_adm_m[1], p_adm_m[2], mu_adm_m, 0, 200)
+        sombreado_trapecio(px0, py_coord, p_adm_a[0], p_adm_a[1], p_adm_a[2], p_adm_a[3], mu_adm_a, 0, 200)
+
+        # Curvas de pertenencia (Azul, Naranja, Verde)
+        canvas.create_line(px0(0), py_coord(1.0), px0(p_adm_b[2]), py_coord(1.0), px0(p_adm_b[3]), py_coord(0.0), fill="#0d47a1", width=1.6)
+        canvas.create_line(px0(p_adm_m[0]), py_coord(0.0), px0(p_adm_m[1]), py_coord(1.0), px0(p_adm_m[2]), py_coord(0.0), fill="#ff8f00", width=1.6)
+        canvas.create_line(px0(p_adm_a[0]), py_coord(0.0), px0(p_adm_a[1]), py_coord(1.0), px0(200), py_coord(1.0), fill="#1b5e20", width=1.6)
+
+        # Marco del gráfico
+        canvas.create_rectangle(bx0_0, y_top, bx1_0, y_bottom, outline="#000000", width=1.5)
+        canvas.create_text((bx0_0 + bx1_0) / 2, y_top - 11, text="1. Input: Admisión", font=("Arial", 8, "bold"), fill="#000000")
+        canvas.create_text(bx0_0 - 9, py_coord(0.0), text="0.0", font=("Arial", 7), fill="#000000")
+        canvas.create_text(bx0_0 - 9, py_coord(1.0), text="1.0", font=("Arial", 7), fill="#000000")
+        canvas.create_text(px0(0), y_bottom + 8, text="0", font=("Arial", 7), fill="#000000")
+        canvas.create_text(px0(200), y_bottom + 8, text="200", font=("Arial", 7), fill="#000000")
+
+        # Entrada X1: línea punteada y caja
+        x1_pix = px0(nota)
+        canvas.create_line(x1_pix, y_top, x1_pix, y_bottom, fill="#c2185b", dash=(2, 2), width=1.4)
+        canvas.create_text(x1_pix, y_top - 6, text="X1", font=("Arial", 7, "bold"), fill="#c2185b")
+        dibujar_flechas_mu(bx0_0, bx1_0, py_coord, [mu_adm_b, mu_adm_m, mu_adm_a])
+        dibujar_caja_input(x1_pix, y_bottom, f"{nota:.1f}")
+
+        # ---------------------------------------------------------------------
+        # PANEL 2: 2. Input: Aprobadas [0 a 20]
+        # ---------------------------------------------------------------------
+        _, _, bx0_1, bx1_1 = get_panel_box(1)
+        bw_1 = bx1_1 - bx0_1
+        def px1(x):
+            c = max(0.0, min(20.0, x))
+            return bx0_1 + (c / 20.0) * bw_1
+
+        p_apr_c = parametros.get('aprobadas_critica', [0, 0, 2, 4])
+        p_apr_r = parametros.get('aprobadas_regular', [2, 4, 6])
+        p_apr_a = parametros.get('aprobadas_completa', [5, 6, 26, 26])
+
+        mu_apr_c = pertenencia_trapezoidal(aprob, p_apr_c[0], p_apr_c[1], p_apr_c[2], p_apr_c[3])
+        mu_apr_r = pertenencia_triangular(aprob, p_apr_r[0], p_apr_r[1], p_apr_r[2])
+        mu_apr_a = pertenencia_trapezoidal(aprob, p_apr_a[0], p_apr_a[1], p_apr_a[2], p_apr_a[3])
+
+        # Sombreado amarillo
+        sombreado_trapecio(px1, py_coord, p_apr_c[0], p_apr_c[1], p_apr_c[2], p_apr_c[3], mu_apr_c, 0, 20)
+        sombreado_triangulo(px1, py_coord, p_apr_r[0], p_apr_r[1], p_apr_r[2], mu_apr_r, 0, 20)
+        sombreado_trapecio(px1, py_coord, p_apr_a[0], p_apr_a[1], p_apr_a[2], p_apr_a[3], mu_apr_a, 0, 20)
+
+        # Curvas de pertenencia (Rojo, Naranja, Verde)
+        canvas.create_line(px1(0), py_coord(1.0), px1(p_apr_c[2]), py_coord(1.0), px1(p_apr_c[3]), py_coord(0.0), fill="#c62828", width=1.6)
+        canvas.create_line(px1(p_apr_r[0]), py_coord(0.0), px1(p_apr_r[1]), py_coord(1.0), px1(p_apr_r[2]), py_coord(0.0), fill="#ff8f00", width=1.6)
+        canvas.create_line(px1(p_apr_a[0]), py_coord(0.0), px1(p_apr_a[1]), py_coord(1.0), px1(20), py_coord(1.0), fill="#1b5e20", width=1.6)
+
+        # Marco del gráfico
+        canvas.create_rectangle(bx0_1, y_top, bx1_1, y_bottom, outline="#000000", width=1.5)
+        canvas.create_text((bx0_1 + bx1_1) / 2, y_top - 11, text="2. Input: Aprobadas", font=("Arial", 8, "bold"), fill="#000000")
+        canvas.create_text(bx0_1 - 9, py_coord(0.0), text="0.0", font=("Arial", 7), fill="#000000")
+        canvas.create_text(bx0_1 - 9, py_coord(1.0), text="1.0", font=("Arial", 7), fill="#000000")
+        canvas.create_text(px1(0), y_bottom + 8, text="0", font=("Arial", 7), fill="#000000")
+        canvas.create_text(px1(20), y_bottom + 8, text="20", font=("Arial", 7), fill="#000000")
+
+        # Entrada X2: línea punteada y caja
+        x2_pix = px1(aprob)
+        canvas.create_line(x2_pix, y_top, x2_pix, y_bottom, fill="#c2185b", dash=(2, 2), width=1.4)
+        canvas.create_text(x2_pix, y_top - 6, text="X2", font=("Arial", 7, "bold"), fill="#c2185b")
+        dibujar_flechas_mu(bx0_1, bx1_1, py_coord, [mu_apr_c, mu_apr_r, mu_apr_a])
+        texto_aprob = f"{aprob:.1f}" if aprob != int(aprob) else f"{int(aprob)}"
+        dibujar_caja_input(x2_pix, y_bottom, texto_aprob)
+
+        # ---------------------------------------------------------------------
+        # PANEL 3: 3. Input: Promedio [0 a 20]
+        # ---------------------------------------------------------------------
+        _, _, bx0_2, bx1_2 = get_panel_box(2)
+        bw_2 = bx1_2 - bx0_2
+        def px2(x):
+            c = max(0.0, min(20.0, x))
+            return bx0_2 + (c / 20.0) * bw_2
+
+        p_prom_d = parametros.get('nota_sem_deficiente', [0, 0, 8, 11])
+        p_prom_a = parametros.get('nota_sem_aceptable', [9.5, 12.5, 15.5])
+        p_prom_s = parametros.get('nota_sem_sobresaliente', [14.5, 17.0, 20.0, 20.0])
+
+        mu_prom_d = pertenencia_trapezoidal(prom, p_prom_d[0], p_prom_d[1], p_prom_d[2], p_prom_d[3])
+        mu_prom_a = pertenencia_triangular(prom, p_prom_a[0], p_prom_a[1], p_prom_a[2])
+        mu_prom_s = pertenencia_trapezoidal(prom, p_prom_s[0], p_prom_s[1], p_prom_s[2], p_prom_s[3])
+
+        # Sombreado amarillo
+        sombreado_trapecio(px2, py_coord, p_prom_d[0], p_prom_d[1], p_prom_d[2], p_prom_d[3], mu_prom_d, 0, 20)
+        sombreado_triangulo(px2, py_coord, p_prom_a[0], p_prom_a[1], p_prom_a[2], mu_prom_a, 0, 20)
+        sombreado_trapecio(px2, py_coord, p_prom_s[0], p_prom_s[1], p_prom_s[2], p_prom_s[3], mu_prom_s, 0, 20)
+
+        # Curvas de pertenencia (Rojo, Naranja, Verde)
+        canvas.create_line(px2(0), py_coord(1.0), px2(p_prom_d[2]), py_coord(1.0), px2(p_prom_d[3]), py_coord(0.0), fill="#c62828", width=1.6)
+        canvas.create_line(px2(p_prom_a[0]), py_coord(0.0), px2(p_prom_a[1]), py_coord(1.0), px2(p_prom_a[2]), py_coord(0.0), fill="#ff8f00", width=1.6)
+        canvas.create_line(px2(p_prom_s[0]), py_coord(0.0), px2(p_prom_s[1]), py_coord(1.0), px2(20), py_coord(1.0), fill="#1b5e20", width=1.6)
+
+        # Marco del gráfico
+        canvas.create_rectangle(bx0_2, y_top, bx1_2, y_bottom, outline="#000000", width=1.5)
+        canvas.create_text((bx0_2 + bx1_2) / 2, y_top - 11, text="3. Input: Promedio", font=("Arial", 8, "bold"), fill="#000000")
+        canvas.create_text(bx0_2 - 9, py_coord(0.0), text="0.0", font=("Arial", 7), fill="#000000")
+        canvas.create_text(bx0_2 - 9, py_coord(1.0), text="1.0", font=("Arial", 7), fill="#000000")
+        canvas.create_text(px2(0), y_bottom + 8, text="0", font=("Arial", 7), fill="#000000")
+        canvas.create_text(px2(20), y_bottom + 8, text="20", font=("Arial", 7), fill="#000000")
+
+        # Entrada X3: línea punteada y caja
+        x3_pix = px2(prom)
+        canvas.create_line(x3_pix, y_top, x3_pix, y_bottom, fill="#c2185b", dash=(2, 2), width=1.4)
+        canvas.create_text(x3_pix, y_top - 6, text="X3", font=("Arial", 7, "bold"), fill="#c2185b")
+        dibujar_flechas_mu(bx0_2, bx1_2, py_coord, [mu_prom_d, mu_prom_a, mu_prom_s])
+        dibujar_caja_input(x3_pix, y_bottom, f"{prom:.1f}")
+
+        # ---------------------------------------------------------------------
+        # PANEL 4: 4. Aggregation & Defuzzify [0.0 a 1.0]
+        # ---------------------------------------------------------------------
+        _, _, bx0_3, bx1_3 = get_panel_box(3)
+        bw_3 = bx1_3 - bx0_3
+        def px3(y_val):
+            c = max(0.0, min(1.0, y_val))
+            return bx0_3 + c * bw_3
+
+        p_rie_b = parametros.get('riesgo_bajo', [0.0, 0.0, 0.25, 0.45])
+        p_rie_m = parametros.get('riesgo_medio', [0.3, 0.5, 0.7])
+        p_rie_a = parametros.get('riesgo_alto', [0.55, 0.75, 1.0, 1.0])
+
+        # Curvas base tenues en gris
+        canvas.create_line(px3(0.0), py_coord(1.0), px3(p_rie_b[2]), py_coord(1.0), px3(p_rie_b[3]), py_coord(0.0), fill="#bdbdbd", width=1.2)
+        canvas.create_line(px3(p_rie_m[0]), py_coord(0.0), px3(p_rie_m[1]), py_coord(1.0), px3(p_rie_m[2]), py_coord(0.0), fill="#bdbdbd", width=1.2)
+        canvas.create_line(px3(p_rie_a[0]), py_coord(0.0), px3(p_rie_a[1]), py_coord(1.0), px3(1.0), py_coord(1.0), fill="#bdbdbd", width=1.2)
+
+        # Polígono de Masa Agregada (Unión MAX de consecuentes truncados)
+        alpha_b = fuerzas.get('Riesgo_Bajo', 0.0)
+        alpha_m = fuerzas.get('Riesgo_Medio', 0.0)
+        alpha_a = fuerzas.get('Riesgo_Alto', 0.0)
+
+        poly_agg = [px3(0.0), py_coord(0.0)]
+        hay_masa = False
+        pasos_agg = 80
+        for s in range(pasos_agg + 1):
+            y_v = s / float(pasos_agg)
+            mb = pertenencia_trapezoidal(y_v, p_rie_b[0], p_rie_b[1], p_rie_b[2], p_rie_b[3])
+            mm = pertenencia_triangular(y_v, p_rie_m[0], p_rie_m[1], p_rie_m[2])
+            ma = pertenencia_trapezoidal(y_v, p_rie_a[0], p_rie_a[1], p_rie_a[2], p_rie_a[3])
+            c_b = min(alpha_b, mb)
+            c_m = min(alpha_m, mm)
+            c_a = min(alpha_a, ma)
+            mu_agg = max(c_b, c_m, c_a)
+            if mu_agg > 0.001:
+                hay_masa = True
+            poly_agg.extend([px3(y_v), py_coord(mu_agg)])
+        poly_agg.extend([px3(1.0), py_coord(0.0)])
+
+        if hay_masa:
+            # Color cyan / teal (#80deea) idéntico a la lámina del profesor
+            canvas.create_polygon(poly_agg, fill="#80deea", outline="#00897b", width=1.6)
+
+        # Marco del gráfico
+        canvas.create_rectangle(bx0_3, y_top, bx1_3, y_bottom, outline="#000000", width=1.5)
+        canvas.create_text((bx0_3 + bx1_3) / 2, y_top - 11, text="4. Aggregation & Defuzzify", font=("Arial", 8, "bold"), fill="#000000")
+        canvas.create_text(bx0_3 - 9, py_coord(0.0), text="0.0", font=("Arial", 7), fill="#000000")
+        canvas.create_text(bx0_3 - 9, py_coord(1.0), text="1.0", font=("Arial", 7), fill="#000000")
+        canvas.create_text(px3(0.0), y_bottom + 8, text="0", font=("Arial", 7), fill="#000000")
+        canvas.create_text(px3(1.0), y_bottom + 8, text="1", font=("Arial", 7), fill="#000000")
+
+        # Flecha vertical púrpura del Centroide apuntando hacia abajo
+        x_cog = px3(riesgo_calculado)
+        canvas.create_line(x_cog, y_top - 2, x_cog, y_bottom, fill="#7b1fa2", width=2.5, arrow=tk.LAST, arrowshape=(6, 8, 3))
+        canvas.create_text(x_cog, y_top - 8, text="Centroid", font=("Arial", 7, "bold"), fill="#7b1fa2")
+
+        # Caja púrpura inferior: Output = XX.X%
+        txt_out = f"Output = {riesgo_calculado * 100:.1f}%"
+        bw_out = 66
+        x_box_out = max(bx0_3 + bw_out / 2 + 1, min(bx1_3 - bw_out / 2 - 1, x_cog))
+        y_box_out = y_bottom + 12
+        canvas.create_rectangle(x_box_out - bw_out / 2, y_box_out - 6, x_box_out + bw_out / 2, y_box_out + 6, outline="#7b1fa2", fill="#ffffff", width=1.5)
+        canvas.create_text(x_box_out, y_box_out, text=txt_out, font=("Arial", 6, "bold"), fill="#7b1fa2")
+
+    def dibujar_masa_difusa_detallada_en_canvas(self, canvas, fuerzas, parametros, riesgo_calculado, target_real=None, titulo_extra="", detalles_calc=None):
+        """
+        Dibuja con precisión la función de masa difusa agregada panorámica (unión MAX de consecuentes truncados)
+        y la línea vertical del centroide (punto de equilibrio / centro de gravedad COG con balanza y fulcro físico).
+        """
+        ancho = canvas.winfo_width()
+        alto = canvas.winfo_height()
+        if ancho <= 1:
+            try:
+                ancho = int(canvas.cget("width"))
+                alto = int(canvas.cget("height"))
+            except Exception:
+                pass
+        if ancho < 80 or alto < 50:
+            return
+
+        canvas.delete("all")
+
+        margen_izq = 55
+        margen_der = 50
+        margen_arr = 26
+        margen_abj = 36
+        ancho_util = ancho - margen_izq - margen_der
+        alto_util = alto - margen_arr - margen_abj
+        if ancho_util <= 10 or alto_util <= 10:
+            return
+
+        def escala_x(val_y):
+            return margen_izq + val_y * ancho_util
+
+        def escala_y(val_mu):
+            return (alto - margen_abj) - val_mu * alto_util
+
+        # 1. Fondo blanco y cuadrícula tenue
+        canvas.create_rectangle(0, 0, ancho, alto, fill="#ffffff", outline="")
+
+        for mu_val in [0.25, 0.50, 0.75, 1.0]:
+            y_pix = escala_y(mu_val)
+            canvas.create_line(margen_izq, y_pix, ancho - margen_der, y_pix, fill="#f0f3f6", dash=(2, 4))
+            canvas.create_text(margen_izq - 10, y_pix, text=f"{mu_val:.2f}", font=("Arial", 7), fill="#777777")
+
+        for y_val in [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]:
+            x_pix = escala_x(y_val)
+            canvas.create_line(x_pix, margen_arr, x_pix, alto - margen_abj, fill="#f8fafc", dash=(2, 4))
+            canvas.create_line(x_pix, alto - margen_abj, x_pix, alto - margen_abj + 4, fill="#888888")
+            canvas.create_text(x_pix, alto - margen_abj + 12, text=f"{y_val:.1f}", font=("Arial", 7), fill="#555555")
+
+        # Ejes coordenados principales
+        canvas.create_line(margen_izq, escala_y(0.0), ancho - margen_der, escala_y(0.0), fill="#444444", width=1.5)
+        canvas.create_line(margen_izq, margen_arr, margen_izq, escala_y(0.0), fill="#444444", width=1.5)
+        canvas.create_text(margen_izq - 10, escala_y(0.0), text="0.00", font=("Arial", 7), fill="#777777")
+        canvas.create_text(margen_izq - 32, margen_arr + alto_util // 2, text="μ(y)", font=("Arial", 8, "bold"), fill="#222222")
+        canvas.create_text(margen_izq + ancho_util // 2, alto - 8, text="Universo de Discurso y ∈ [0.0, 1.0] (Riesgo Continuo de Deserción)", font=("Arial", 8, "italic"), fill="#333333")
+
+        # 2. Consecuentes difusos originales (Líneas tenues punteadas)
+        p_bajo = parametros.get('riesgo_bajo', [0.0, 0.0, 0.25, 0.45])
+        p_medio = parametros.get('riesgo_medio', [0.3, 0.5, 0.7])
+        p_alto = parametros.get('riesgo_alto', [0.55, 0.75, 1.0, 1.0])
+
+        # Base Bajo
+        pts_b = [
+            (escala_x(p_bajo[0]), escala_y(0.0)),
+            (escala_x(p_bajo[1]), escala_y(1.0)),
+            (escala_x(p_bajo[2]), escala_y(1.0)),
+            (escala_x(p_bajo[3]), escala_y(0.0))
+        ]
+        canvas.create_line([c for pt in pts_b for c in pt], fill="#90caf9", dash=(3, 3), width=1)
+        canvas.create_text(escala_x((p_bajo[1] + p_bajo[2]) / 2), escala_y(1.0) + 12, text="Bajo", font=("Arial", 8, "italic"), fill="#1976d2")
+
+        # Base Medio
+        pts_m = [
+            (escala_x(p_medio[0]), escala_y(0.0)),
+            (escala_x(p_medio[1]), escala_y(1.0)),
+            (escala_x(p_medio[2]), escala_y(0.0))
+        ]
+        canvas.create_line([c for pt in pts_m for c in pt], fill="#ffe082", dash=(3, 3), width=1)
+        canvas.create_text(escala_x(p_medio[1]), escala_y(1.0) + 12, text="Medio", font=("Arial", 8, "italic"), fill="#f57c00")
+
+        # Base Alto
+        pts_a = [
+            (escala_x(p_alto[0]), escala_y(0.0)),
+            (escala_x(p_alto[1]), escala_y(1.0)),
+            (escala_x(p_alto[2]), escala_y(1.0)),
+            (escala_x(p_alto[3]), escala_y(0.0))
+        ]
+        canvas.create_line([c for pt in pts_a for c in pt], fill="#ef9a9a", dash=(3, 3), width=1)
+        canvas.create_text(escala_x((p_alto[1] + p_alto[2]) / 2), escala_y(1.0) + 12, text="Alto", font=("Arial", 8, "italic"), fill="#d32f2f")
+
+        # 3. Líneas de corte alfa (Fuerzas de activación de los consecuentes)
+        alpha_b = fuerzas.get('Riesgo_Bajo', 0.0)
+        alpha_m = fuerzas.get('Riesgo_Medio', 0.0)
+        alpha_a = fuerzas.get('Riesgo_Alto', 0.0)
+
+        if alpha_b > 0.005:
+            canvas.create_line(escala_x(p_bajo[0]), escala_y(alpha_b), escala_x(p_bajo[3]), escala_y(alpha_b), fill="#1565c0", dash=(4, 2), width=1.5)
+            canvas.create_text(escala_x(p_bajo[0]) + 28, escala_y(alpha_b) - 7, text=f"α_Bajo={alpha_b:.2f}", font=("Arial", 7, "bold"), fill="#1565c0")
+
+        if alpha_m > 0.005:
+            canvas.create_line(escala_x(p_medio[0]), escala_y(alpha_m), escala_x(p_medio[2]), escala_y(alpha_m), fill="#e65100", dash=(4, 2), width=1.5)
+            canvas.create_text(escala_x(p_medio[1]), escala_y(alpha_m) - 7, text=f"α_Medio={alpha_m:.2f}", font=("Arial", 7, "bold"), fill="#e65100")
+
+        if alpha_a > 0.005:
+            canvas.create_line(escala_x(p_alto[0]), escala_y(alpha_a), escala_x(p_alto[3]), escala_y(alpha_a), fill="#c62828", dash=(4, 2), width=1.5)
+            canvas.create_text(escala_x(p_alto[3]) - 28, escala_y(alpha_a) - 7, text=f"α_Alto={alpha_a:.2f}", font=("Arial", 7, "bold"), fill="#c62828")
+
+        # 4. Polígono de la Función de Masa Agregada (Unión MAX)
+        num_pasos = 160
+        poly_coords = [escala_x(0.0), escala_y(0.0)]
+        hay_masa = False
+
+        for i in range(num_pasos + 1):
+            y_val = i / float(num_pasos)
+            mb = pertenencia_trapezoidal(y_val, p_bajo[0], p_bajo[1], p_bajo[2], p_bajo[3])
+            mm = pertenencia_triangular(y_val, p_medio[0], p_medio[1], p_medio[2])
+            ma = pertenencia_trapezoidal(y_val, p_alto[0], p_alto[1], p_alto[2], p_alto[3])
+            c_b = min(alpha_b, mb)
+            c_m = min(alpha_m, mm)
+            c_a = min(alpha_a, ma)
+            mu_agg = max(c_b, c_m, c_a)
+            if mu_agg > 0.0001:
+                hay_masa = True
+            poly_coords.extend([escala_x(y_val), escala_y(mu_agg)])
+
+        poly_coords.extend([escala_x(1.0), escala_y(0.0)])
+
+        if hay_masa:
+            canvas.create_polygon(poly_coords, fill="#bbdefb", outline="#0d47a1", width=2)
+        else:
+            canvas.create_text(
+                margen_izq + ancho_util // 2, margen_arr + alto_util // 2,
+                text="⚠️ Sin activación en reglas (Masa = 0). Salvaguarda neutral y* = 0.50",
+                font=("Arial", 9, "bold"), fill="#e65100"
+            )
+
+        # 5. Umbral de Decisión canónico (0.50)
+        x_umbral = escala_x(0.50)
+        canvas.create_line(x_umbral, margen_arr, x_umbral, escala_y(0.0), fill="#616161", dash=(4, 3), width=1.5)
+        canvas.create_text(x_umbral, margen_arr - 6, text="Umbral = 0.50", font=("Arial", 8, "bold"), fill="#424242")
+        canvas.create_text(escala_x(0.22), margen_arr + 8, text="◄ NO DESERCIÓN (Bajo Riesgo)", font=("Arial", 7, "bold"), fill="#2e7d32")
+        canvas.create_text(escala_x(0.78), margen_arr + 8, text="DESERCIÓN (Alto Riesgo) ►", font=("Arial", 7, "bold"), fill="#c62828")
+
+        # 6. Centroide y Punto de Apoyo Fulcro (Centro de Masa Defuzzificado)
+        x_cog = escala_x(riesgo_calculado)
+        color_cog = "#d32f2f" if riesgo_calculado >= 0.5 else "#107c41"
+
+        canvas.create_line(x_cog, margen_arr + 14, x_cog, escala_y(0.0), fill=color_cog, width=2.5)
+
+        # Triángulo de fulcro (soporte físico de la balanza de masa)
+        canvas.create_polygon(
+            x_cog - 7, escala_y(0.0) + 11,
+            x_cog + 7, escala_y(0.0) + 11,
+            x_cog, escala_y(0.0),
+            fill=color_cog, outline="#222222"
+        )
+        canvas.create_text(x_cog, escala_y(0.0) + 20, text=f"▲ Fulcro y*={riesgo_calculado:.4f}", font=("Arial", 8, "bold"), fill=color_cog)
+
+        # Etiqueta flotante superior sobre el centroide
+        tag_diag = "DROPOUT" if riesgo_calculado >= 0.5 else "NO DROPOUT"
+        tag_texto = f" y* = {riesgo_calculado:.4f} [{tag_diag}] "
+        x_tag = max(margen_izq + 65, min(ancho - margen_der - 65, x_cog))
+        canvas.create_rectangle(x_tag - 65, margen_arr - 2, x_tag + 65, margen_arr + 14, fill=color_cog, outline="#ffffff")
+        canvas.create_text(x_tag, margen_arr + 6, text=tag_texto, font=("Arial", 8, "bold"), fill="#ffffff")
+
+        # 7. Encabezado de la Gráfica y Métricas Matemáticas
+        titulo = "FUNCIÓN DE MASA DIFUSA AGREGADA Y CENTROIDE (Paso 3 y 4 Mamdani)"
+        if target_real:
+            titulo += f" | Estudiante Dataset: '{target_real}'"
+        canvas.create_text(margen_izq, 10, anchor=tk.W, text=titulo, font=("Arial", 9, "bold"), fill="#0d47a1")
+
+        if detalles_calc:
+            den_val = detalles_calc.get('suma_denominador', 0.0)
+            num_val = detalles_calc.get('suma_numerador', 0.0)
+            integral_masa = den_val * 0.01
+            integral_momento = num_val * 0.01
+            info_masa = f"Área (Masa) = {integral_masa:.3f} | Momento = {integral_momento:.3f} | y* = {riesgo_calculado:.4f}"
+            canvas.create_text(ancho - margen_der, 10, anchor=tk.E, text=info_masa, font=("Courier", 8, "bold"), fill="#37474f")
+
+    def dibujar_masa_difusa_en_canvas(self, canvas, fuerzas, parametros, riesgo_calculado, target_real=None, titulo_extra="", detalles_calc=None, nota=None, aprob=None, prom=None):
+        """
+        Dibuja la gráfica en el canvas llamando al modo activo (detallada o 4 paneles).
+        """
+        modo = getattr(self, 'modo_vista_grafico', None)
+        modo_val = modo.get() if modo else "4_paneles"
+        if modo_val == "detallada":
+            self.dibujar_masa_difusa_detallada_en_canvas(
+                canvas, fuerzas, parametros, riesgo_calculado, target_real=target_real,
+                titulo_extra=titulo_extra, detalles_calc=detalles_calc
+            )
+        else:
+            if nota is None and hasattr(self, 'ultimo_caso_diagnostico'):
+                c = self.ultimo_caso_diagnostico
+                nota = c.get('nota', 118.0)
+                aprob = c.get('aprob', 1.0)
+                prom = c.get('prom', 10.0)
+            elif nota is None:
+                nota, aprob, prom = 118.0, 1.0, 10.0
+            self.dibujar_proceso_difuso_4_paneles(
+                canvas, nota, aprob, prom, parametros, fuerzas, riesgo_calculado,
+                target_real=target_real, det=detalles_calc
+            )
+
+    def redibujar_masa_diagnostico(self):
+        """Redibuja el gráfico del estudiante según el modo seleccionado (4 paneles o masa detallada)."""
+        if hasattr(self, 'ultimo_caso_diagnostico') and hasattr(self, 'canvas_masa_diagnostico'):
+            c = self.ultimo_caso_diagnostico
+            modo = getattr(self, 'modo_vista_grafico', None)
+            modo_val = modo.get() if modo else "4_paneles"
+
+            if modo_val == "detallada":
+                self.dibujar_masa_difusa_detallada_en_canvas(
+                    self.canvas_masa_diagnostico,
+                    c.get('fuerzas', {}),
+                    c.get('parametros', self.parametros_difusos),
+                    c.get('riesgo', 0.5),
+                    target_real=c.get('target_real'),
+                    detalles_calc=c.get('det')
+                )
+            else:
+                self.dibujar_proceso_difuso_4_paneles(
+                    self.canvas_masa_diagnostico,
+                    c.get('nota', 118.0),
+                    c.get('aprob', 1.0),
+                    c.get('prom', 10.0),
+                    c.get('parametros', self.parametros_difusos),
+                    c.get('fuerzas', {}),
+                    c.get('riesgo', 0.5),
+                    target_real=c.get('target_real'),
+                    det=c.get('det')
+                )
 
     # =========================================================================
     # PESTAÑA 4: DIAGNÓSTICO EXPLICABLE (XAI)
@@ -915,17 +1565,58 @@ class AplicacionDesercion:
         ttk.Separator(frame_izq, orient=tk.HORIZONTAL).pack(fill=tk.X, padx=10, pady=10)
 
         ttk.Label(frame_izq, text="Cargar Casos Reales del Dataset:").pack(anchor=tk.W, padx=10, pady=2)
-        btn_caso_drop = ttk.Button(frame_izq, text="Cargar Caso: Desertor Real", command=lambda: self.cargar_ejemplo_clase('Dropout'))
+        btn_caso_drop = ttk.Button(frame_izq, text="🧑‍🎓 Cargar Caso: Desertor Real (Dropout)", command=lambda: self.cargar_ejemplo_clase('Dropout'))
         btn_caso_drop.pack(fill=tk.X, padx=10, pady=2)
 
-        btn_caso_grad = ttk.Button(frame_izq, text="Cargar Caso: Graduado Real", command=lambda: self.cargar_ejemplo_clase('Graduate'))
+        btn_caso_grad = ttk.Button(frame_izq, text="🎓 Cargar Caso: Graduado Real (Graduate)", command=lambda: self.cargar_ejemplo_clase('Graduate'))
         btn_caso_grad.pack(fill=tk.X, padx=10, pady=2)
+
+        btn_caso_enr = ttk.Button(frame_izq, text="📚 Cargar Caso: Matriculado Real (Enrolled)", command=lambda: self.cargar_ejemplo_clase('Enrolled'))
+        btn_caso_enr.pack(fill=tk.X, padx=10, pady=2)
 
         frame_der = ttk.LabelFrame(parent, text="Informe Explicable del Sistema Híbrido (XAI)")
         frame_der.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
+        # Gráfico del Proceso Completo Mamdani (Selector: 4 Paneles / Masa Detallada)
+        frame_grafico_diag = ttk.LabelFrame(
+            frame_der,
+            text="Visualización Gráfica de Inferencia Mamdani"
+        )
+        frame_grafico_diag.pack(fill=tk.X, padx=5, pady=3)
+
+        # Barra selectora de vista gráfica
+        frame_selector_vista = ttk.Frame(frame_grafico_diag)
+        frame_selector_vista.pack(fill=tk.X, padx=6, pady=(1, 3))
+
+        ttk.Label(frame_selector_vista, text="Modo de Visualización:", font=("Arial", 8, "bold")).pack(side=tk.LEFT, padx=(2, 6))
+
+        self.modo_vista_grafico = tk.StringVar(value="4_paneles")
+
+        rb_4p = ttk.Radiobutton(
+            frame_selector_vista,
+            text="📊 Pipeline de 4 Paneles (Inputs X1, X2, X3 ➔ Masa & Centroide)",
+            variable=self.modo_vista_grafico,
+            value="4_paneles",
+            command=self.redibujar_masa_diagnostico
+        )
+        rb_4p.pack(side=tk.LEFT, padx=6)
+
+        rb_det = ttk.Radiobutton(
+            frame_selector_vista,
+            text="⚖️ Función de Masa Detallada (Balanza Fulcro COG, Integrales y Umbral)",
+            variable=self.modo_vista_grafico,
+            value="detallada",
+            command=self.redibujar_masa_diagnostico
+        )
+        rb_det.pack(side=tk.LEFT, padx=6)
+
+        self.canvas_masa_diagnostico = tk.Canvas(frame_grafico_diag, bg="white", height=185)
+        self.canvas_masa_diagnostico.pack(fill=tk.BOTH, expand=False, padx=4, pady=2)
+        self.canvas_masa_diagnostico.bind("<Configure>", lambda e: self.redibujar_masa_diagnostico())
+
         self.txt_diagnostico = scrolledtext.ScrolledText(frame_der, font=("Courier", 10))
         self.txt_diagnostico.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.ventana.after(200, lambda: self.accion_diagnosticar_formulario())
 
     def cargar_ejemplo_clase(self, clase_objetivo):
         for est in self.datos_prueba:
@@ -1021,6 +1712,20 @@ class AplicacionDesercion:
             marca = "✓ PREDICCIÓN CORRECTA (Coincide con el histórico real)" if acerto else "✗ DISCREPANCIA CON LA CONDICIÓN REAL"
             self.txt_diagnostico.insert(tk.END, f"  Verificación:      {marca} (Realidad: {target_real})\n")
         self.txt_diagnostico.insert(tk.END, "=" * 95 + "\n")
+
+        # Guardar estado para redibujo y renderizar en canvas de diagnóstico (4 paneles completos)
+        self.ultimo_caso_diagnostico = {
+            'nota': nota,
+            'aprob': aprob,
+            'prom': prom,
+            'fuerzas': det['fuerzas'],
+            'parametros': self.parametros_difusos,
+            'riesgo': riesgo,
+            'target_real': target_real,
+            'det': det
+        }
+        if hasattr(self, 'canvas_masa_diagnostico'):
+            self.redibujar_masa_diagnostico()
 
     # =========================================================================
     # PESTAÑA 5: MATRIZ DE CONFUSIÓN Y RESULTADOS

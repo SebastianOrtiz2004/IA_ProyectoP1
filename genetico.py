@@ -12,6 +12,7 @@ import sys
 import random
 import time
 from difuso import evaluar_motor_difuso
+from datos import obtener_muestra_estratificada
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
@@ -394,8 +395,12 @@ def ejecutar_algoritmo_genetico(datos_entrenamiento, N_pob=30, numero_generacion
     print("  (Reparación geométrica post-cruce y post-mutación: 0% individuos muertos)")
     print("=" * 70)
 
-    muestra_evaluacion = datos_entrenamiento[:tam_muestra]
-    print(f"\n  Muestra para cálculo de fitness: {len(muestra_evaluacion)} estudiantes")
+    muestra_evaluacion, cuotas = obtener_muestra_estratificada(
+        datos_entrenamiento, tam_muestra=tam_muestra, semilla=42, retornar_cuotas=True
+    )
+    print(f"\n  Muestra estratificada para cálculo de fitness: {len(muestra_evaluacion)} estudiantes")
+    detalles_estratos = " | ".join([f"{c}: {cnt} ({cnt/len(muestra_evaluacion)*100:.1f}%)" for c, cnt in sorted(cuotas.items())])
+    print(f"  Distribución estratificada (Stratified Sampling): {detalles_estratos}")
 
     print(f"  Generando población inicial de {N_pob} cromosomas...")
     poblacion = []

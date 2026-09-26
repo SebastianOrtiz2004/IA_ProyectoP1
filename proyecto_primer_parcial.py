@@ -153,7 +153,7 @@ def main():
     # PASO 4: Algoritmo Genético (Calibra funciones de pertenencia difusas)
     # -------------------------------------------------------------------------
     print("\n  El Algoritmo Genético está optimizando los cortes de las funciones de pertenencia...")
-    print("  (Esto toma alrededor de 1 minuto usando la muestra de 800 estudiantes)")
+    print("  (Esto toma alrededor de 1 minuto usando una muestra estratificada de 400 estudiantes)")
 
     tiempo_inicio = time.time()
     parametros_calibrados, mejor_fitness, historial, registro_generaciones = ejecutar_algoritmo_genetico(
