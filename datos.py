@@ -46,12 +46,12 @@ def partir_dataset(lista_estudiantes, porcentaje_entrenamiento=0.80, semilla=42)
     indices_prueba = indices[punto_corte:]
 
     datos_entrenamiento = []
-    for i in indices_entrenamiento:
-        datos_entrenamiento.append(lista_estudiantes[i])
+    for indice in indices_entrenamiento:
+        datos_entrenamiento.append(lista_estudiantes[indice])
 
     datos_prueba = []
-    for i in indices_prueba:
-        datos_prueba.append(lista_estudiantes[i])
+    for indice in indices_prueba:
+        datos_prueba.append(lista_estudiantes[indice])
 
     return datos_entrenamiento, datos_prueba
 
@@ -72,16 +72,16 @@ def obtener_muestra_estratificada(lista_estudiantes, tam_muestra=400, columna_cl
     """
     if tam_muestra >= len(lista_estudiantes):
         cuotas = {}
-        for e in lista_estudiantes:
-            c = e.get(columna_clase, 'Desconocido')
-            cuotas[c] = cuotas.get(c, 0) + 1
+        for estudiante in lista_estudiantes:
+            clase_estudiante = estudiante.get(columna_clase, 'Desconocido')
+            cuotas[clase_estudiante] = cuotas.get(clase_estudiante, 0) + 1
         return (list(lista_estudiantes), cuotas) if retornar_cuotas else list(lista_estudiantes)
 
     rng = random.Random(semilla)
     estratos = {}
-    for est in lista_estudiantes:
-        clase = est.get(columna_clase, 'Desconocido')
-        estratos.setdefault(clase, []).append(est)
+    for estudiante in lista_estudiantes:
+        clase = estudiante.get(columna_clase, 'Desconocido')
+        estratos.setdefault(clase, []).append(estudiante)
 
     total_poblacion = len(lista_estudiantes)
     cuotas = {}
@@ -92,7 +92,7 @@ def obtener_muestra_estratificada(lista_estudiantes, tam_muestra=400, columna_cl
     # Ajuste por redondeo si la suma difiere ligeramente de tam_muestra
     diferencia = tam_muestra - sum(cuotas.values())
     if diferencia != 0:
-        clase_mayoritaria = max(estratos.keys(), key=lambda c: len(estratos[c]))
+        clase_mayoritaria = max(estratos.keys(), key=lambda clase_nombre: len(estratos[clase_nombre]))
         cuotas[clase_mayoritaria] += diferencia
 
     muestra = []

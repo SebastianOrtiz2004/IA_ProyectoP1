@@ -108,9 +108,9 @@ def main():
 
     # Contar cuántos estudiantes hay por cada clase
     conteo_clases = {}
-    for est in lista_estudiantes:
-        clase = est.get('Target', '?')
-        conteo_clases[clase] = conteo_clases.get(clase, 0) + 1
+    for estudiante in lista_estudiantes:
+        clase_estudiante = estudiante.get('Target', '?')
+        conteo_clases[clase_estudiante] = conteo_clases.get(clase_estudiante, 0) + 1
 
     for nombre_clase, cantidad in sorted(conteo_clases.items()):
         porcentaje = (cantidad / total_cargados) * 100
@@ -181,10 +181,10 @@ def main():
 
     # Seleccionar 1 estudiante representativo de cada clase para demostrar la explicación
     estudiantes_ejemplo = {'Dropout': None, 'Graduate': None, 'Enrolled': None}
-    for est in datos_prueba:
-        clase_target = est.get('Target')
+    for estudiante in datos_prueba:
+        clase_target = estudiante.get('Target')
         if clase_target in estudiantes_ejemplo and estudiantes_ejemplo[clase_target] is None:
-            estudiantes_ejemplo[clase_target] = est
+            estudiantes_ejemplo[clase_target] = estudiante
 
         todos_encontrados = True
         for valor in estudiantes_ejemplo.values():
@@ -194,10 +194,10 @@ def main():
         if todos_encontrados:
             break
 
-    for nombre_clase, est in estudiantes_ejemplo.items():
-        if est is not None:
+    for nombre_clase, estudiante_ejemplo in estudiantes_ejemplo.items():
+        if estudiante_ejemplo is not None:
             diagnosticar_estudiante_integral(
-                est,
+                estudiante_ejemplo,
                 parametros_calibrados,
                 reglas_prism=reglas_prism_causales,
                 reglas_apriori=reglas_apriori,
@@ -220,13 +220,13 @@ def main():
     parametros_iniciales = obtener_parametros_iniciales()
     aciertos_iniciales = 0
 
-    for est in datos_prueba:
-        nota = float(est.get('Admission grade', 100))
-        aprobadas = float(est.get('Curricular units 1st sem (approved)', 0))
-        promedio = float(est.get('Curricular units 1st sem (grade)', 0))
+    for estudiante in datos_prueba:
+        nota_admision = float(estudiante.get('Admission grade', 100))
+        materias_aprobadas = float(estudiante.get('Curricular units 1st sem (approved)', 0))
+        promedio_notas = float(estudiante.get('Curricular units 1st sem (grade)', 0))
 
-        riesgo_ini, _ = evaluar_motor_difuso(
-            nota, aprobadas, promedio, parametros_iniciales, numero_puntos=50, reglas=reglas_difusas_inducidas
+        riesgo_inicial, _ = evaluar_motor_difuso(
+            nota_admision, materias_aprobadas, promedio_notas, parametros_iniciales, numero_puntos=50, reglas=reglas_difusas_inducidas
         )
 
         activa_prism = False
@@ -234,25 +234,25 @@ def main():
             for regla in reglas_prism_causales:
                 cumple = True
                 for atributo, valor in regla['condiciones']:
-                    valor_est = est.get(atributo)
-                    if valor_est != valor and str(valor_est) != str(valor):
+                    valor_atributo = estudiante.get(atributo)
+                    if valor_atributo != valor and str(valor_atributo) != str(valor):
                         cumple = False
                         break
                 if cumple:
                     activa_prism = True
                     break
 
-        if riesgo_ini >= 0.5 or activa_prism:
-            pred = 'Dropout'
+        if riesgo_inicial >= 0.5 or activa_prism:
+            prediccion = 'Dropout'
         else:
-            pred = 'No Dropout'
+            prediccion = 'No Dropout'
 
-        if est.get('Target') == 'Dropout':
-            real = 'Dropout'
+        if estudiante.get('Target') == 'Dropout':
+            condicion_real = 'Dropout'
         else:
-            real = 'No Dropout'
+            condicion_real = 'No Dropout'
 
-        if pred == real:
+        if prediccion == condicion_real:
             aciertos_iniciales += 1
 
     exactitud_inicial = aciertos_iniciales / len(datos_prueba)

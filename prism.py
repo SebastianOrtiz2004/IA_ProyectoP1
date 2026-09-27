@@ -114,13 +114,13 @@ def seleccionar_regla_ganadora_prism(candidatas, semilla=42):
       3° Máximo Lift (redondeado a 8 decimales)
     En caso de empate técnico perfecto en las 3 métricas, aplica desempate aleatorio con semilla.
     """
-    def funcion_ordenamiento(c):
-        return (round(c['confianza'], 8), c['cobertura'], round(c['lift'], 8))
+    def funcion_ordenamiento(candidata):
+        return (round(candidata['confianza'], 8), candidata['cobertura'], round(candidata['lift'], 8))
 
     candidatas_ordenadas = sorted(candidatas, key=funcion_ordenamiento, reverse=True)
     mejor_puntaje = funcion_ordenamiento(candidatas_ordenadas[0])
 
-    empates_top = [c for c in candidatas_ordenadas if funcion_ordenamiento(c) == mejor_puntaje]
+    empates_top = [candidata for candidata in candidatas_ordenadas if funcion_ordenamiento(candidata) == mejor_puntaje]
     hubo_empate = len(empates_top) > 1
 
     if hubo_empate:
@@ -144,7 +144,7 @@ def ejecutar_prism(datos_entrenamiento, clase_objetivo='Dropout', semilla=42, mi
       la condición del MIENTRAS se evalúa como FALSO y el algoritmo concluye devolviendo la regla.
     """
     N = len(datos_entrenamiento)
-    conteo_B = sum(1 for e in datos_entrenamiento if e.get('Target') == clase_objetivo)
+    conteo_B = sum(1 for estudiante in datos_entrenamiento if estudiante.get('Target') == clase_objetivo)
     prob_B = conteo_B / N if N > 0 else 0.0
 
     salida_texto = []
@@ -161,22 +161,22 @@ def ejecutar_prism(datos_entrenamiento, clase_objetivo='Dropout', semilla=42, mi
 
         for atributo in columnas_restantes:
             valores_unicos = set()
-            for est in datos_entrenamiento:
-                if atributo in est:
-                    valores_unicos.add(est[atributo])
+            for estudiante in datos_entrenamiento:
+                if atributo in estudiante:
+                    valores_unicos.add(estudiante[atributo])
 
             for valor in valores_unicos:
                 condiciones_prueba = condiciones_actuales + [(atributo, valor)]
-                inter, casos_A, conf, sop, lift = calcular_metricas_prism(
+                cobertura_interseccion, casos_antecedente, confianza_regla, soporte_regla, lift_regla = calcular_metricas_prism(
                     datos_entrenamiento, condiciones_prueba, clase_objetivo
                 )
 
                 # Umbral mínimo de casos para evitar reglas espurias de 1 caso
                 umbral = min_cobertura if iteracion == 1 else max(5, min_cobertura // 2)
-                if inter < umbral:
+                if cobertura_interseccion < umbral:
                     continue
 
-                partes_regla = [f"{traducir_atributo(a)} = '{v}'" for a, v in condiciones_prueba]
+                partes_regla = [f"{traducir_atributo(nombre_attr)} = '{valor_attr}'" for nombre_attr, valor_attr in condiciones_prueba]
                 texto_antecedente = " AND ".join(partes_regla)
                 texto_completo = f"SI {texto_antecedente} ENTONCES Deserción = 'Sí'"
 
@@ -185,11 +185,11 @@ def ejecutar_prism(datos_entrenamiento, clase_objetivo='Dropout', semilla=42, mi
                     'valor': valor,
                     'condiciones': condiciones_prueba,
                     'texto_regla': texto_completo,
-                    'casos_A': casos_A,
-                    'cobertura': inter,
-                    'confianza': conf,
-                    'soporte': sop,
-                    'lift': lift
+                    'casos_A': casos_antecedente,
+                    'cobertura': cobertura_interseccion,
+                    'confianza': confianza_regla,
+                    'soporte': soporte_regla,
+                    'lift': lift_regla
                 })
 
         if not candidatas:
@@ -202,7 +202,7 @@ def ejecutar_prism(datos_entrenamiento, clase_objetivo='Dropout', semilla=42, mi
         )
 
         # Ancho dinámico para la tabla de candidatas
-        max_longitud = max(len(c['texto_regla']) for c in candidatas_ordenadas)
+        max_longitud = max(len(candidata['texto_regla']) for candidata in candidatas_ordenadas)
         ancho_col = max(55, min(95, max_longitud + 2))
         ancho_tabla = ancho_col + 65
 
@@ -213,10 +213,10 @@ def ejecutar_prism(datos_entrenamiento, clase_objetivo='Dropout', semilla=42, mi
 
         mostrar_top = min(10, len(candidatas_ordenadas))
         iter_cuerpo = ""
-        for idx, c in enumerate(candidatas_ordenadas[:mostrar_top], 1):
-            marca = " [*]" if c == regla_ganadora else "    "
-            texto_c = (c['texto_regla'][:ancho_col-3] + '...') if len(c['texto_regla']) > ancho_col else c['texto_regla']
-            iter_cuerpo += f"{idx:<3}{marca}| {texto_c:<{ancho_col}} | {c['casos_A']:<6} | {c['cobertura']:<6} | {c['confianza']:<10.6f} | {c['soporte']:<10.6f} | {c['lift']:<8.4f} |\n"
+        for indice, candidata in enumerate(candidatas_ordenadas[:mostrar_top], 1):
+            marca = " [*]" if candidata == regla_ganadora else "    "
+            texto_candidata = (candidata['texto_regla'][:ancho_col-3] + '...') if len(candidata['texto_regla']) > ancho_col else candidata['texto_regla']
+            iter_cuerpo += f"{indice:<3}{marca}| {texto_candidata:<{ancho_col}} | {candidata['casos_A']:<6} | {candidata['cobertura']:<6} | {candidata['confianza']:<10.6f} | {candidata['soporte']:<10.6f} | {candidata['lift']:<8.4f} |\n"
 
         iter_pie = "-" * ancho_tabla + "\n"
         if hubo_empate:
@@ -254,11 +254,11 @@ def ejecutar_prism(datos_entrenamiento, clase_objetivo='Dropout', semilla=42, mi
         return [], "".join(salida_texto)
 
     # RESUMEN FINAL DE LA REGLA COMPLETA INDUCIDA (CON LAS 18 VARIABLES)
-    inter_f, casos_A_f, conf_f, sop_f, lift_f = calcular_metricas_prism(
+    cobertura_final, casos_antecedente_final, confianza_final, soporte_final, lift_final = calcular_metricas_prism(
         datos_entrenamiento, condiciones_actuales, clase_objetivo
     )
 
-    partes_finales = [f"{traducir_atributo(a)} = '{v}'" for a, v in condiciones_actuales]
+    partes_finales = [f"{traducir_atributo(nombre_attr)} = '{valor_attr}'" for nombre_attr, valor_attr in condiciones_actuales]
     texto_final = f"SI {' AND '.join(partes_finales)} ENTONCES Deserción = 'Sí'"
 
     resumen_txt = "\n" + "=" * 95 + "\n"
@@ -267,11 +267,11 @@ def ejecutar_prism(datos_entrenamiento, clase_objetivo='Dropout', semilla=42, mi
     resumen_txt += f" REGLA COMPLETA GANADORA ({len(condiciones_actuales)} Variables Compuestas en el Antecedente):\n"
     resumen_txt += f"   {texto_final}\n\n"
     resumen_txt += f" MÉTRICAS FINALES:\n"
-    resumen_txt += f"   - Casos A (|A|):                   {casos_A_f}\n"
-    resumen_txt += f"   - Cobertura (|A & B|):              {inter_f}\n"
-    resumen_txt += f"   - Confianza (Precisión Local):     {conf_f:.6f} ({conf_f * 100:.2f}%)\n"
-    resumen_txt += f"   - Soporte (Proporción Global N):   {sop_f:.6f} ({sop_f * 100:.2f}%)\n"
-    resumen_txt += f"   - Lift (Fuerza de Correlación):    {lift_f:.4f}\n"
+    resumen_txt += f"   - Casos A (|A|):                   {casos_antecedente_final}\n"
+    resumen_txt += f"   - Cobertura (|A & B|):              {cobertura_final}\n"
+    resumen_txt += f"   - Confianza (Precisión Local):     {confianza_final:.6f} ({confianza_final * 100:.2f}%)\n"
+    resumen_txt += f"   - Soporte (Proporción Global N):   {soporte_final:.6f} ({soporte_final * 100:.2f}%)\n"
+    resumen_txt += f"   - Lift (Fuerza de Correlación):    {lift_final:.4f}\n"
     resumen_txt += "=" * 95 + "\n"
 
     salida_texto.append(resumen_txt)
@@ -280,14 +280,32 @@ def ejecutar_prism(datos_entrenamiento, clase_objetivo='Dropout', semilla=42, mi
         'condiciones': condiciones_actuales,
         'texto_regla': texto_final,
         'historial': [(h['condiciones'][-1], h['confianza'], h['cobertura']) for h in historial_iteraciones],
-        'confianza': conf_f,
-        'cobertura': inter_f,
-        'soporte': sop_f,
-        'lift': lift_f
+        'confianza': confianza_final,
+        'cobertura': cobertura_final,
+        'soporte': soporte_final,
+        'lift': lift_final
     }
 
+    lista_reglas_finales = [regla_dict]
+    # Si la regla compuesta acumuló múltiples condiciones, conservar también la regla
+    # general de la primera iteración si posee alta confianza (>= 80%) y amplia cobertura
+    for paso_iteracion in historial_iteraciones[:-1]:
+        if paso_iteracion['confianza'] >= 0.80 and paso_iteracion['cobertura'] >= 15:
+            conds_paso = paso_iteracion['condiciones']
+            partes_paso = [f"{traducir_atributo(attr)} = '{val}'" for attr, val in conds_paso]
+            regla_base = {
+                'condiciones': conds_paso,
+                'texto_regla': f"SI {' AND '.join(partes_paso)} ENTONCES Deserción = 'Sí'",
+                'historial': [],
+                'confianza': paso_iteracion['confianza'],
+                'cobertura': paso_iteracion['cobertura'],
+                'soporte': paso_iteracion['soporte'],
+                'lift': paso_iteracion['lift']
+            }
+            lista_reglas_finales.append(regla_base)
+
     salida_completa = "".join(salida_texto)
-    return [regla_dict], salida_completa
+    return lista_reglas_finales, salida_completa
 
 
 def inducir_reglas_difusas_con_prism(datos_entrenamiento, min_cobertura=15, imprimir=False):
@@ -308,43 +326,43 @@ def inducir_reglas_difusas_con_prism(datos_entrenamiento, min_cobertura=15, impr
     encabezado += "=" * 95 + "\n"
     lineas_difuso.append(encabezado)
 
-    conteos = {}
-    for est in datos_entrenamiento:
+    conteos_combinaciones = {}
+    for estudiante in datos_entrenamiento:
         try:
-            adm = float(est.get('Admission grade', 100))
-            apr = float(est.get('Curricular units 1st sem (approved)', 0))
-            prom = float(est.get('Curricular units 1st sem (grade)', 0))
-            target = est.get('Target', '')
+            nota_admision = float(estudiante.get('Admission grade', 100))
+            materias_aprobadas = float(estudiante.get('Curricular units 1st sem (approved)', 0))
+            promedio_notas = float(estudiante.get('Curricular units 1st sem (grade)', 0))
+            estado_estudiante = estudiante.get('Target', '')
         except (ValueError, TypeError):
             continue
 
-        x1 = 'X1_Baja' if adm < 115 else ('X1_Alta' if adm >= 145 else 'X1_Media')
-        x2 = 'X2_Critica' if apr <= 2 else ('X2_Completa' if apr >= 6 else 'X2_Regular')
-        x3 = 'X3_Deficiente' if prom < 10.0 else ('X3_Sobresaliente' if prom >= 14.0 else 'X3_Aceptable')
+        etiqueta_admision = 'X1_Baja' if nota_admision < 115 else ('X1_Alta' if nota_admision >= 145 else 'X1_Media')
+        etiqueta_aprobadas = 'X2_Critica' if materias_aprobadas <= 2 else ('X2_Completa' if materias_aprobadas >= 6 else 'X2_Regular')
+        etiqueta_promedio = 'X3_Deficiente' if promedio_notas < 10.0 else ('X3_Sobresaliente' if promedio_notas >= 14.0 else 'X3_Aceptable')
 
-        clave = (x1, x2, x3)
-        if clave not in conteos:
-            conteos[clave] = {'total': 0, 'dropout': 0}
-        conteos[clave]['total'] += 1
-        if target == 'Dropout':
-            conteos[clave]['dropout'] += 1
+        clave_combinacion = (etiqueta_admision, etiqueta_aprobadas, etiqueta_promedio)
+        if clave_combinacion not in conteos_combinaciones:
+            conteos_combinaciones[clave_combinacion] = {'total_casos': 0, 'casos_desercion': 0}
+        conteos_combinaciones[clave_combinacion]['total_casos'] += 1
+        if estado_estudiante == 'Dropout':
+            conteos_combinaciones[clave_combinacion]['casos_desercion'] += 1
 
     # Agregar combinaciones inexistentes (0 casos)
-    etq_x1 = ['X1_Baja', 'X1_Media', 'X1_Alta']
-    etq_x2 = ['X2_Critica', 'X2_Regular', 'X2_Completa']
-    etq_x3 = ['X3_Deficiente', 'X3_Aceptable', 'X3_Sobresaliente']
-    for e1 in etq_x1:
-        for e2 in etq_x2:
-            for e3 in etq_x3:
-                c = (e1, e2, e3)
-                if c not in conteos:
-                    conteos[c] = {'total': 0, 'dropout': 0}
+    etiquetas_admision = ['X1_Baja', 'X1_Media', 'X1_Alta']
+    etiquetas_aprobadas = ['X2_Critica', 'X2_Regular', 'X2_Completa']
+    etiquetas_promedio = ['X3_Deficiente', 'X3_Aceptable', 'X3_Sobresaliente']
+    for etiqueta_1 in etiquetas_admision:
+        for etiqueta_2 in etiquetas_aprobadas:
+            for etiqueta_3 in etiquetas_promedio:
+                combinacion_tupla = (etiqueta_1, etiqueta_2, etiqueta_3)
+                if combinacion_tupla not in conteos_combinaciones:
+                    conteos_combinaciones[combinacion_tupla] = {'total_casos': 0, 'casos_desercion': 0}
 
     # Ordenar las 27 combinaciones por frecuencia
-    def criterio_total(item):
-        return item[1]['total']
+    def criterio_total(elemento_combinacion):
+        return elemento_combinacion[1]['total_casos']
 
-    items_ordenados = sorted(conteos.items(), key=criterio_total, reverse=True)
+    combinaciones_ordenadas = sorted(conteos_combinaciones.items(), key=criterio_total, reverse=True)
 
     reglas_inducidas = []
     combinaciones_podadas = []
@@ -354,29 +372,29 @@ def inducir_reglas_difusas_con_prism(datos_entrenamiento, min_cobertura=15, impr
     tabla += f"{'#':<3} | {'Regla Candidata (Antecedente)':<42} | {'Casos':<6} | {'Dropout':<7} | {'Tasa Des':<9} | {'Consecuente':<13} | {'Estado':<10} |\n"
     tabla += "-" * 95 + "\n"
 
-    for idx, (combo, stats) in enumerate(items_ordenados, 1):
-        tot = stats['total']
-        drop = stats['dropout']
-        conf = drop / tot if tot > 0 else 0.0
-        texto_ant = " AND ".join(combo)
+    for indice, (combinacion, estadisticas) in enumerate(combinaciones_ordenadas, 1):
+        total_casos = estadisticas['total_casos']
+        casos_desercion = estadisticas['casos_desercion']
+        tasa_desercion = casos_desercion / total_casos if total_casos > 0 else 0.0
+        texto_antecedente = " AND ".join(combinacion)
 
-        if tot >= min_cobertura:
-            if conf >= 0.50:
+        if total_casos >= min_cobertura:
+            if tasa_desercion >= 0.50:
                 consecuente = 'Riesgo_Alto'
-            elif conf <= 0.25:
+            elif tasa_desercion <= 0.25:
                 consecuente = 'Riesgo_Bajo'
             else:
                 consecuente = 'Riesgo_Medio'
             estado = "APROBADA"
-            reglas_inducidas.append((list(combo), consecuente, tot, conf))
+            reglas_inducidas.append((list(combinacion), consecuente, total_casos, tasa_desercion))
         else:
             consecuente = "---"
             estado = "PODADA"
-            motivo = f"Baja cobertura ({tot} < {min_cobertura})" if tot > 0 else "0 casos (inexistente)"
-            combinaciones_podadas.append((list(combo), tot, conf, motivo))
+            motivo = f"Baja cobertura ({total_casos} < {min_cobertura})" if total_casos > 0 else "0 casos (inexistente)"
+            combinaciones_podadas.append((list(combinacion), total_casos, tasa_desercion, motivo))
 
         marca = "[X]" if estado == "APROBADA" else "   "
-        tabla += f"{idx:<3} {marca}| {texto_ant:<42} | {tot:<6} | {drop:<7} | {conf*100:6.1f}%  | {consecuente:<13} | {estado:<10} |\n"
+        tabla += f"{indice:<3} {marca}| {texto_antecedente:<42} | {total_casos:<6} | {casos_desercion:<7} | {tasa_desercion*100:6.1f}%  | {consecuente:<13} | {estado:<10} |\n"
 
     tabla += "-" * 95 + "\n"
     resumen_corte = (

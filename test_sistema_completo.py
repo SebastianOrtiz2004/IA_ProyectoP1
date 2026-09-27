@@ -115,6 +115,8 @@ def test_todo():
     assert len(app.reglas_difusas) == 18
 
     # Probar callbacks principales
+    assert hasattr(app, 'combo_carrera'), "Debe existir selector de carrera en el formulario"
+    assert hasattr(app, 'combo_pagos'), "Debe existir selector de matrícula en el formulario"
     app.accion_calcular_prism_causal(mostrar_aviso=False)
     app.accion_calcular_apriori(mostrar_aviso=False)
     app.accion_ver_puntos_de_corte_calibrados()

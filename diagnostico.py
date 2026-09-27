@@ -270,14 +270,16 @@ def evaluar_rendimiento_motor_difuso(datos_prueba, parametros, reglas_difusas=No
     fn = 0
     muestras_casos = []
 
-    for idx, est in enumerate(datos_prueba, 1):
-        nota = float(est.get('Admission grade', 100))
-        aprob = float(est.get('Curricular units 1st sem (approved)', 0))
-        prom = float(est.get('Curricular units 1st sem (grade)', 0))
-        target_real = est.get('Target', '')
-        es_desertor_real = (target_real == 'Dropout')
+    for indice, estudiante in enumerate(datos_prueba, 1):
+        nota_admision = float(estudiante.get('Admission grade', 100))
+        materias_aprobadas = float(estudiante.get('Curricular units 1st sem (approved)', 0))
+        promedio_notas = float(estudiante.get('Curricular units 1st sem (grade)', 0))
+        estado_estudiante_real = estudiante.get('Target', '')
+        es_desertor_real = (estado_estudiante_real == 'Dropout')
 
-        riesgo, _ = evaluar_motor_difuso(nota, aprob, prom, parametros, numero_puntos=100, reglas=reglas_difusas)
+        riesgo, _ = evaluar_motor_difuso(
+            nota_admision, materias_aprobadas, promedio_notas, parametros, numero_puntos=100, reglas=reglas_difusas
+        )
         pred_dropout = (riesgo >= 0.5)
 
         acerto = False
@@ -292,15 +294,15 @@ def evaluar_rendimiento_motor_difuso(datos_prueba, parametros, reglas_difusas=No
         else:
             fn += 1
 
-        if idx <= 35:
+        if indice <= 35:
             muestras_casos.append({
-                'num': idx,
-                'nota': nota,
-                'aprob': aprob,
-                'prom': prom,
+                'num': indice,
+                'nota_admision': nota_admision,
+                'materias_aprobadas': materias_aprobadas,
+                'promedio_notas': promedio_notas,
                 'riesgo': riesgo,
                 'pred': 'Dropout' if pred_dropout else 'No Dropout',
-                'target': target_real,
+                'target': estado_estudiante_real,
                 'acerto': acerto
             })
 
@@ -382,10 +384,10 @@ def formatear_reporte_demostracion_motor_difuso(res_difuso, es_calibrado=False):
     lineas.append(f"{'#Est':<5} | {'Nota Adm':<9} | {'Aprob S1':<8} | {'Prom S1':<8} | {'Riesgo Difuso (y*)':<18} | {'Predicción':<12} | {'Realidad':<10} | {'Resultado'}")
     lineas.append("-" * 100)
 
-    for m in muestras:
-        marca = "✓ ACIERTO" if m['acerto'] else "✗ DISCREPANCIA"
-        riesgo_txt = f"{m['riesgo']:.4f} ({m['riesgo']*100:5.1f}%)"
-        lineas.append(f"#{m['num']:03d}  | {m['nota']:>8.1f} | {m['aprob']:>8.0f} | {m['prom']:>8.2f} | {riesgo_txt:<18} | {m['pred']:<12} | {m['target']:<10} | {marca}")
+    for muestra_estudiante in muestras:
+        marca = "✓ ACIERTO" if muestra_estudiante['acerto'] else "✗ DISCREPANCIA"
+        riesgo_txt = f"{muestra_estudiante['riesgo']:.4f} ({muestra_estudiante['riesgo']*100:5.1f}%)"
+        lineas.append(f"#{muestra_estudiante['num']:03d}  | {muestra_estudiante['nota_admision']:>8.1f} | {muestra_estudiante['materias_aprobadas']:>8.0f} | {muestra_estudiante['promedio_notas']:>8.2f} | {riesgo_txt:<18} | {muestra_estudiante['pred']:<12} | {muestra_estudiante['target']:<10} | {marca}")
 
     lineas.append("-" * 100)
     lineas.append(f" ... Mostrando los primeros {len(muestras)} de {total} estudiantes del conjunto de prueba independiente.")

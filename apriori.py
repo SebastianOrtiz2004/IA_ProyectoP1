@@ -58,17 +58,17 @@ def extraer_items_estudiante_apriori(estudiante, incluir_target=False):
 
     # Target (opcional, para minería global)
     if incluir_target:
-        val_t = estudiante.get('Target', '')
-        if val_t:
-            desercion_esp = "Si" if val_t == 'Dropout' else "No"
+        valor_objetivo = estudiante.get('Target', '')
+        if valor_objetivo:
+            desercion_esp = "Si" if valor_objetivo == 'Dropout' else "No"
             items.add(f"Desercion={desercion_esp}")
 
     # Nota de admisión discretizada
     try:
-        adm = float(estudiante.get('Admission grade', 0))
-        if adm < 115:
+        nota_admision = float(estudiante.get('Admission grade', 0))
+        if nota_admision < 115:
             items.add("Nota_Admision=Baja")
-        elif adm < 145:
+        elif nota_admision < 145:
             items.add("Nota_Admision=Media")
         else:
             items.add("Nota_Admision=Alta")
@@ -77,12 +77,12 @@ def extraer_items_estudiante_apriori(estudiante, incluir_target=False):
 
     # Materias aprobadas en 1er semestre
     try:
-        apr1 = float(estudiante.get('Curricular units 1st sem (approved)', 0))
-        if apr1 == 0:
+        aprobadas_primer_semestre = float(estudiante.get('Curricular units 1st sem (approved)', 0))
+        if aprobadas_primer_semestre == 0:
             items.add("Aprobadas_S1=Cero")
-        elif apr1 <= 3:
+        elif aprobadas_primer_semestre <= 3:
             items.add("Aprobadas_S1=Pocas")
-        elif apr1 <= 6:
+        elif aprobadas_primer_semestre <= 6:
             items.add("Aprobadas_S1=Regular")
         else:
             items.add("Aprobadas_S1=Muchas")
@@ -91,10 +91,10 @@ def extraer_items_estudiante_apriori(estudiante, incluir_target=False):
 
     # Promedio de notas en 1er semestre
     try:
-        prom1 = float(estudiante.get('Curricular units 1st sem (grade)', 0))
-        if prom1 < 10.0:
+        promedio_primer_semestre = float(estudiante.get('Curricular units 1st sem (grade)', 0))
+        if promedio_primer_semestre < 10.0:
             items.add("Promedio_S1=Deficiente")
-        elif prom1 < 14.0:
+        elif promedio_primer_semestre < 14.0:
             items.add("Promedio_S1=Aceptable")
         else:
             items.add("Promedio_S1=Sobresaliente")
@@ -103,12 +103,12 @@ def extraer_items_estudiante_apriori(estudiante, incluir_target=False):
 
     # Materias aprobadas en 2do semestre
     try:
-        apr2 = float(estudiante.get('Curricular units 2nd sem (approved)', 0))
-        if apr2 == 0:
+        aprobadas_segundo_semestre = float(estudiante.get('Curricular units 2nd sem (approved)', 0))
+        if aprobadas_segundo_semestre == 0:
             items.add("Aprobadas_S2=Cero")
-        elif apr2 <= 3:
+        elif aprobadas_segundo_semestre <= 3:
             items.add("Aprobadas_S2=Pocas")
-        elif apr2 <= 6:
+        elif aprobadas_segundo_semestre <= 6:
             items.add("Aprobadas_S2=Regular")
         else:
             items.add("Aprobadas_S2=Muchas")

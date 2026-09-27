@@ -107,6 +107,47 @@ def reparar_geometria(cromosoma):
             cromosoma_reparado[indice_gen] = puntos_del_bloque[posicion]
             posicion += 1
 
+    # -------------------------------------------------------------------------
+    # GARANTÍA DE PARTICIÓN DIFUSA RUSPINI (SIN VACÍOS NI ZONAS CIEGAS)
+    # Exige que los conjuntos lingüísticos contiguos se solapen continuamente:
+    # -------------------------------------------------------------------------
+    # 1. Variable X1: Nota de Admisión (0 a 200)
+    # Solapamiento Baja / Media:
+    if cromosoma_reparado[1] < cromosoma_reparado[2] + 4.0:
+        cromosoma_reparado[1] = min(LIMITES_GENES[1][1], cromosoma_reparado[2] + 5.0)
+        if cromosoma_reparado[1] < cromosoma_reparado[0] + 2.0:
+            cromosoma_reparado[0] = max(LIMITES_GENES[0][0], cromosoma_reparado[1] - 4.0)
+    # Solapamiento Media / Alta:
+    if cromosoma_reparado[4] < cromosoma_reparado[5] + 4.0:
+        cromosoma_reparado[4] = min(LIMITES_GENES[4][1], cromosoma_reparado[5] + 5.0)
+        if cromosoma_reparado[4] < cromosoma_reparado[3] + 2.0:
+            cromosoma_reparado[3] = max(LIMITES_GENES[3][0], cromosoma_reparado[4] - 3.0)
+
+    # 2. Variable X2: Materias Aprobadas (0 a 26)
+    # Solapamiento Crítica / Regular:
+    if cromosoma_reparado[8] < cromosoma_reparado[9] + 1.0:
+        cromosoma_reparado[8] = min(LIMITES_GENES[8][1], cromosoma_reparado[9] + 1.2)
+        if cromosoma_reparado[8] < cromosoma_reparado[7]:
+            cromosoma_reparado[7] = max(0.0, cromosoma_reparado[8] - 0.5)
+    # Solapamiento Regular / Completa:
+    if cromosoma_reparado[11] < cromosoma_reparado[12] + 1.0:
+        cromosoma_reparado[11] = min(LIMITES_GENES[11][1], cromosoma_reparado[12] + 1.2)
+        if cromosoma_reparado[11] < cromosoma_reparado[10] + 0.5:
+            cromosoma_reparado[10] = max(LIMITES_GENES[10][0], cromosoma_reparado[11] - 0.8)
+
+    # 3. Variable X3: Promedio Semestral (0 a 20)
+    # Triángulo Aceptable: evitar aplastamiento o pendiente vertical
+    if cromosoma_reparado[17] < cromosoma_reparado[16] + 1.5:
+        cromosoma_reparado[17] = min(LIMITES_GENES[17][1], cromosoma_reparado[16] + 1.8)
+    if cromosoma_reparado[18] < cromosoma_reparado[17] + 1.5:
+        cromosoma_reparado[18] = min(LIMITES_GENES[18][1], cromosoma_reparado[17] + 1.8)
+
+    # SOLAPAMIENTO DEFICIENTE / ACEPTABLE (Elimina la zona ciega / vacío de X3):
+    if cromosoma_reparado[15] < cromosoma_reparado[16] + 1.2:
+        cromosoma_reparado[15] = min(LIMITES_GENES[15][1], cromosoma_reparado[16] + 1.5)
+        if cromosoma_reparado[15] < cromosoma_reparado[14] + 0.8:
+            cromosoma_reparado[14] = max(LIMITES_GENES[14][0], cromosoma_reparado[15] - 1.0)
+
     return cromosoma_reparado
 
 

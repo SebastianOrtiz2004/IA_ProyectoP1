@@ -22,7 +22,8 @@ from difuso import (
 )
 from prism import (
     inducir_reglas_difusas_con_prism,
-    ejecutar_prism
+    ejecutar_prism,
+    traducir_atributo
 )
 from apriori import (
     ejecutar_apriori,
@@ -55,6 +56,27 @@ from diagnostico import (
     evaluar_rendimiento_motor_difuso,
     formatear_reporte_demostracion_motor_difuso
 )
+
+# Catálogo oficial de las 17 carreras universitarias presentes en el dataset data.csv
+DICCIONARIO_CARRERAS = {
+    9991: "9991 - Gestión / Administración (Nocturno)",
+    9500: "9500 - Enfermería",
+    9147: "9147 - Gestión / Administración (Diurno)",
+    9238: "9238 - Servicio Social (Diurno)",
+    9085: "9085 - Enfermería Veterinaria",
+    9119: "9119 - Ingeniería Informática",
+    9254: "9254 - Turismo",
+    9070: "9070 - Diseño de Comunicación",
+    9670: "9670 - Gestión de Publicidad y Marketing",
+    9773: "9773 - Periodismo y Comunicación",
+    9003: "9003 - Agronomía",
+    9853: "9853 - Educación Básica",
+    9556: "9556 - Higiene Bucodental",
+    8014: "8014 - Servicio Social (Nocturno)",
+    171: "171 - Diseño de Animación y Multimedia",
+    9130: "9130 - Equinocultura",
+    33: "33 - Tecnologías de Producción de Biocombustibles"
+}
 
 
 class AplicacionDesercion:
@@ -101,6 +123,8 @@ class AplicacionDesercion:
             self.datos_entrenamiento, self.datos_prueba = partir_dataset(self.datos_completos, 0.80)
             # Inducción inicial de las 18 reglas cuantitativas
             self.reglas_difusas, _, self.reporte_difuso = inducir_reglas_difusas_con_prism(self.datos_entrenamiento, min_cobertura=15)
+            # Inducción inicial de las reglas causales cualitativas PRISM para el diagnóstico explicable
+            self.reglas_prism, _ = ejecutar_prism(self.datos_entrenamiento, clase_objetivo='Dropout', semilla=42)
         except Exception as error:
             print("Aviso al cargar datos:", error)
 
@@ -988,7 +1012,7 @@ class AplicacionDesercion:
         self.txt_cortes_difusos.insert(tk.END, texto)
         self.txt_cortes_difusos.config(state=tk.DISABLED)
 
-    def dibujar_proceso_difuso_4_paneles(self, canvas, nota, aprob, prom, parametros, fuerzas, riesgo_calculado, target_real=None, det=None):
+    def dibujar_proceso_difuso_4_paneles(self, canvas, nota_admision, materias_aprobadas, promedio_notas, parametros, fuerzas, riesgo_calculado, target_real=None, det=None):
         """
         Dibuja el flujo visual Mamdani completo en 4 paneles horizontales conectados por flechas:
           [1. Input: Admisión] ➔ [2. Input: Aprobadas] ➔ [3. Input: Promedio] ➔ [4. Aggregation & Defuzzify]
@@ -1114,9 +1138,9 @@ class AplicacionDesercion:
         p_adm_m = parametros.get('nota_adm_media', [110, 135, 160])
         p_adm_a = parametros.get('nota_adm_alta', [145, 170, 200, 200])
 
-        mu_adm_b = pertenencia_trapezoidal(nota, p_adm_b[0], p_adm_b[1], p_adm_b[2], p_adm_b[3])
-        mu_adm_m = pertenencia_triangular(nota, p_adm_m[0], p_adm_m[1], p_adm_m[2])
-        mu_adm_a = pertenencia_trapezoidal(nota, p_adm_a[0], p_adm_a[1], p_adm_a[2], p_adm_a[3])
+        mu_adm_b = pertenencia_trapezoidal(nota_admision, p_adm_b[0], p_adm_b[1], p_adm_b[2], p_adm_b[3])
+        mu_adm_m = pertenencia_triangular(nota_admision, p_adm_m[0], p_adm_m[1], p_adm_m[2])
+        mu_adm_a = pertenencia_trapezoidal(nota_admision, p_adm_a[0], p_adm_a[1], p_adm_a[2], p_adm_a[3])
 
         # Sombreado amarillo en conjuntos activados
         sombreado_trapecio(px0, py_coord, p_adm_b[0], p_adm_b[1], p_adm_b[2], p_adm_b[3], mu_adm_b, 0, 200)
@@ -1137,11 +1161,11 @@ class AplicacionDesercion:
         canvas.create_text(px0(200), y_bottom + 8, text="200", font=("Arial", 7), fill="#000000")
 
         # Entrada X1: línea punteada y caja
-        x1_pix = px0(nota)
+        x1_pix = px0(nota_admision)
         canvas.create_line(x1_pix, y_top, x1_pix, y_bottom, fill="#c2185b", dash=(2, 2), width=1.4)
         canvas.create_text(x1_pix, y_top - 6, text="X1", font=("Arial", 7, "bold"), fill="#c2185b")
         dibujar_flechas_mu(bx0_0, bx1_0, py_coord, [mu_adm_b, mu_adm_m, mu_adm_a])
-        dibujar_caja_input(x1_pix, y_bottom, f"{nota:.1f}")
+        dibujar_caja_input(x1_pix, y_bottom, f"{nota_admision:.1f}")
 
         # ---------------------------------------------------------------------
         # PANEL 2: 2. Input: Aprobadas [0 a 20]
@@ -1156,9 +1180,9 @@ class AplicacionDesercion:
         p_apr_r = parametros.get('aprobadas_regular', [2, 4, 6])
         p_apr_a = parametros.get('aprobadas_completa', [5, 6, 26, 26])
 
-        mu_apr_c = pertenencia_trapezoidal(aprob, p_apr_c[0], p_apr_c[1], p_apr_c[2], p_apr_c[3])
-        mu_apr_r = pertenencia_triangular(aprob, p_apr_r[0], p_apr_r[1], p_apr_r[2])
-        mu_apr_a = pertenencia_trapezoidal(aprob, p_apr_a[0], p_apr_a[1], p_apr_a[2], p_apr_a[3])
+        mu_apr_c = pertenencia_trapezoidal(materias_aprobadas, p_apr_c[0], p_apr_c[1], p_apr_c[2], p_apr_c[3])
+        mu_apr_r = pertenencia_triangular(materias_aprobadas, p_apr_r[0], p_apr_r[1], p_apr_r[2])
+        mu_apr_a = pertenencia_trapezoidal(materias_aprobadas, p_apr_a[0], p_apr_a[1], p_apr_a[2], p_apr_a[3])
 
         # Sombreado amarillo
         sombreado_trapecio(px1, py_coord, p_apr_c[0], p_apr_c[1], p_apr_c[2], p_apr_c[3], mu_apr_c, 0, 20)
@@ -1179,12 +1203,12 @@ class AplicacionDesercion:
         canvas.create_text(px1(20), y_bottom + 8, text="20", font=("Arial", 7), fill="#000000")
 
         # Entrada X2: línea punteada y caja
-        x2_pix = px1(aprob)
+        x2_pix = px1(materias_aprobadas)
         canvas.create_line(x2_pix, y_top, x2_pix, y_bottom, fill="#c2185b", dash=(2, 2), width=1.4)
         canvas.create_text(x2_pix, y_top - 6, text="X2", font=("Arial", 7, "bold"), fill="#c2185b")
         dibujar_flechas_mu(bx0_1, bx1_1, py_coord, [mu_apr_c, mu_apr_r, mu_apr_a])
-        texto_aprob = f"{aprob:.1f}" if aprob != int(aprob) else f"{int(aprob)}"
-        dibujar_caja_input(x2_pix, y_bottom, texto_aprob)
+        texto_aprobadas = f"{materias_aprobadas:.1f}" if materias_aprobadas != int(materias_aprobadas) else f"{int(materias_aprobadas)}"
+        dibujar_caja_input(x2_pix, y_bottom, texto_aprobadas)
 
         # ---------------------------------------------------------------------
         # PANEL 3: 3. Input: Promedio [0 a 20]
@@ -1199,9 +1223,9 @@ class AplicacionDesercion:
         p_prom_a = parametros.get('nota_sem_aceptable', [9.5, 12.5, 15.5])
         p_prom_s = parametros.get('nota_sem_sobresaliente', [14.5, 17.0, 20.0, 20.0])
 
-        mu_prom_d = pertenencia_trapezoidal(prom, p_prom_d[0], p_prom_d[1], p_prom_d[2], p_prom_d[3])
-        mu_prom_a = pertenencia_triangular(prom, p_prom_a[0], p_prom_a[1], p_prom_a[2])
-        mu_prom_s = pertenencia_trapezoidal(prom, p_prom_s[0], p_prom_s[1], p_prom_s[2], p_prom_s[3])
+        mu_prom_d = pertenencia_trapezoidal(promedio_notas, p_prom_d[0], p_prom_d[1], p_prom_d[2], p_prom_d[3])
+        mu_prom_a = pertenencia_triangular(promedio_notas, p_prom_a[0], p_prom_a[1], p_prom_a[2])
+        mu_prom_s = pertenencia_trapezoidal(promedio_notas, p_prom_s[0], p_prom_s[1], p_prom_s[2], p_prom_s[3])
 
         # Sombreado amarillo
         sombreado_trapecio(px2, py_coord, p_prom_d[0], p_prom_d[1], p_prom_d[2], p_prom_d[3], mu_prom_d, 0, 20)
@@ -1222,11 +1246,11 @@ class AplicacionDesercion:
         canvas.create_text(px2(20), y_bottom + 8, text="20", font=("Arial", 7), fill="#000000")
 
         # Entrada X3: línea punteada y caja
-        x3_pix = px2(prom)
+        x3_pix = px2(promedio_notas)
         canvas.create_line(x3_pix, y_top, x3_pix, y_bottom, fill="#c2185b", dash=(2, 2), width=1.4)
         canvas.create_text(x3_pix, y_top - 6, text="X3", font=("Arial", 7, "bold"), fill="#c2185b")
         dibujar_flechas_mu(bx0_2, bx1_2, py_coord, [mu_prom_d, mu_prom_a, mu_prom_s])
-        dibujar_caja_input(x3_pix, y_bottom, f"{prom:.1f}")
+        dibujar_caja_input(x3_pix, y_bottom, f"{promedio_notas:.1f}")
 
         # ---------------------------------------------------------------------
         # PANEL 4: 4. Aggregation & Defuzzify [0.0 a 1.0]
@@ -1470,7 +1494,7 @@ class AplicacionDesercion:
             info_masa = f"Área (Masa) = {integral_masa:.3f} | Momento = {integral_momento:.3f} | y* = {riesgo_calculado:.4f}"
             canvas.create_text(ancho - margen_der, 10, anchor=tk.E, text=info_masa, font=("Courier", 8, "bold"), fill="#37474f")
 
-    def dibujar_masa_difusa_en_canvas(self, canvas, fuerzas, parametros, riesgo_calculado, target_real=None, titulo_extra="", detalles_calc=None, nota=None, aprob=None, prom=None):
+    def dibujar_masa_difusa_en_canvas(self, canvas, fuerzas, parametros, riesgo_calculado, target_real=None, titulo_extra="", detalles_calc=None, nota_admision=None, materias_aprobadas=None, promedio_notas=None):
         """
         Dibuja la gráfica en el canvas llamando al modo activo (detallada o 4 paneles).
         """
@@ -1482,45 +1506,45 @@ class AplicacionDesercion:
                 titulo_extra=titulo_extra, detalles_calc=detalles_calc
             )
         else:
-            if nota is None and hasattr(self, 'ultimo_caso_diagnostico'):
-                c = self.ultimo_caso_diagnostico
-                nota = c.get('nota', 118.0)
-                aprob = c.get('aprob', 1.0)
-                prom = c.get('prom', 10.0)
-            elif nota is None:
-                nota, aprob, prom = 118.0, 1.0, 10.0
+            if nota_admision is None and hasattr(self, 'ultimo_caso_diagnostico'):
+                caso_guardado = self.ultimo_caso_diagnostico
+                nota_admision = caso_guardado.get('nota_admision', 118.0)
+                materias_aprobadas = caso_guardado.get('materias_aprobadas', 1.0)
+                promedio_notas = caso_guardado.get('promedio_notas', 10.0)
+            elif nota_admision is None:
+                nota_admision, materias_aprobadas, promedio_notas = 118.0, 1.0, 10.0
             self.dibujar_proceso_difuso_4_paneles(
-                canvas, nota, aprob, prom, parametros, fuerzas, riesgo_calculado,
+                canvas, nota_admision, materias_aprobadas, promedio_notas, parametros, fuerzas, riesgo_calculado,
                 target_real=target_real, det=detalles_calc
             )
 
     def redibujar_masa_diagnostico(self):
         """Redibuja el gráfico del estudiante según el modo seleccionado (4 paneles o masa detallada)."""
         if hasattr(self, 'ultimo_caso_diagnostico') and hasattr(self, 'canvas_masa_diagnostico'):
-            c = self.ultimo_caso_diagnostico
+            caso_actual = self.ultimo_caso_diagnostico
             modo = getattr(self, 'modo_vista_grafico', None)
             modo_val = modo.get() if modo else "4_paneles"
 
             if modo_val == "detallada":
                 self.dibujar_masa_difusa_detallada_en_canvas(
                     self.canvas_masa_diagnostico,
-                    c.get('fuerzas', {}),
-                    c.get('parametros', self.parametros_difusos),
-                    c.get('riesgo', 0.5),
-                    target_real=c.get('target_real'),
-                    detalles_calc=c.get('det')
+                    caso_actual.get('fuerzas', {}),
+                    caso_actual.get('parametros', self.parametros_difusos),
+                    caso_actual.get('riesgo', 0.5),
+                    target_real=caso_actual.get('target_real'),
+                    detalles_calc=caso_actual.get('det')
                 )
             else:
                 self.dibujar_proceso_difuso_4_paneles(
                     self.canvas_masa_diagnostico,
-                    c.get('nota', 118.0),
-                    c.get('aprob', 1.0),
-                    c.get('prom', 10.0),
-                    c.get('parametros', self.parametros_difusos),
-                    c.get('fuerzas', {}),
-                    c.get('riesgo', 0.5),
-                    target_real=c.get('target_real'),
-                    det=c.get('det')
+                    caso_actual.get('nota_admision', 118.0),
+                    caso_actual.get('materias_aprobadas', 1.0),
+                    caso_actual.get('promedio_notas', 10.0),
+                    caso_actual.get('parametros', self.parametros_difusos),
+                    caso_actual.get('fuerzas', {}),
+                    caso_actual.get('riesgo', 0.5),
+                    target_real=caso_actual.get('target_real'),
+                    det=caso_actual.get('det')
                 )
 
     # =========================================================================
@@ -1545,13 +1569,18 @@ class AplicacionDesercion:
         self.entry_prom.insert(0, "10.0")
         self.entry_prom.pack(fill=tk.X, padx=10, pady=2)
 
-        ttk.Label(frame_izq, text="¿Tiene Deuda de Matrícula?").pack(anchor=tk.W, padx=10, pady=2)
-        self.combo_deudor = ttk.Combobox(frame_izq, values=["0 (Sin Deudas)", "1 (Tiene Deuda)"], state="readonly")
-        self.combo_deudor.current(1)
-        self.combo_deudor.pack(fill=tk.X, padx=10, pady=2)
+        ttk.Label(frame_izq, text="Carrera Universitaria (Course):").pack(anchor=tk.W, padx=10, pady=2)
+        valores_carreras = list(DICCIONARIO_CARRERAS.values())
+        self.combo_carrera = ttk.Combobox(frame_izq, values=valores_carreras, state="readonly")
+        self.combo_carrera.set(DICCIONARIO_CARRERAS[9991])
+        self.combo_carrera.pack(fill=tk.X, padx=10, pady=2)
 
-        ttk.Label(frame_izq, text="¿Pagos de Colegiatura al Día?").pack(anchor=tk.W, padx=10, pady=2)
-        self.combo_pagos = ttk.Combobox(frame_izq, values=["1 (Pagos al Día)", "0 (Atrasado)"], state="readonly")
+        ttk.Label(frame_izq, text="¿Cuotas de Matrícula al Día? (Tuition):").pack(anchor=tk.W, padx=10, pady=2)
+        self.combo_pagos = ttk.Combobox(
+            frame_izq,
+            values=["1 (Matrícula al Día / Sin Atrasos)", "0 (Atrasado / Con Cuotas Pendientes)"],
+            state="readonly"
+        )
         self.combo_pagos.current(1)
         self.combo_pagos.pack(fill=tk.X, padx=10, pady=2)
 
@@ -1614,78 +1643,260 @@ class AplicacionDesercion:
         self.canvas_masa_diagnostico.pack(fill=tk.BOTH, expand=False, padx=4, pady=2)
         self.canvas_masa_diagnostico.bind("<Configure>", lambda e: self.redibujar_masa_diagnostico())
 
+        # Banner de Síntesis del Sistema Híbrido (Diferenciación Visual Inmediata)
+        self.frame_resumen_hibrido = tk.Frame(frame_der, bg="#f1f3f5", relief=tk.GROOVE, bd=1, padx=6, pady=4)
+        self.frame_resumen_hibrido.pack(fill=tk.X, padx=5, pady=(3, 3))
+
+        self.lbl_tarjeta_difuso = tk.Label(
+            self.frame_resumen_hibrido,
+            text="📚 Riesgo Académico (Mamdani): --",
+            font=("Arial", 9, "bold"),
+            bg="#f1f3f5",
+            fg="#222222"
+        )
+        self.lbl_tarjeta_difuso.pack(side=tk.LEFT, padx=(4, 10))
+
+        self.lbl_tarjeta_prism = tk.Label(
+            self.frame_resumen_hibrido,
+            text="🏛️ Causal Administrativa (PRISM): --",
+            font=("Arial", 9, "bold"),
+            bg="#f1f3f5",
+            fg="#222222"
+        )
+        self.lbl_tarjeta_prism.pack(side=tk.LEFT, padx=(4, 10))
+
+        self.lbl_tarjeta_veredicto = tk.Label(
+            self.frame_resumen_hibrido,
+            text="Diagnóstico: --",
+            font=("Arial", 9, "bold"),
+            bg="#f1f3f5",
+            fg="#222222"
+        )
+        self.lbl_tarjeta_veredicto.pack(side=tk.RIGHT, padx=6)
+
         self.txt_diagnostico = scrolledtext.ScrolledText(frame_der, font=("Courier", 10))
         self.txt_diagnostico.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         self.ventana.after(200, lambda: self.accion_diagnosticar_formulario())
 
     def cargar_ejemplo_clase(self, clase_objetivo):
-        for est in self.datos_prueba:
-            if est.get('Target') == clase_objetivo:
-                self.entry_adm.delete(0, tk.END)
-                self.entry_adm.insert(0, str(est.get('Admission grade', 100)))
+        caso_seleccionado = None
+        for estudiante in self.datos_prueba:
+            if estudiante.get('Target') == clase_objetivo:
+                materias_aprobadas_val = float(estudiante.get('Curricular units 1st sem (approved)', 0))
+                promedio_notas_val = float(estudiante.get('Curricular units 1st sem (grade)', 0))
 
-                self.entry_aprob.delete(0, tk.END)
-                self.entry_aprob.insert(0, str(est.get('Curricular units 1st sem (approved)', 0)))
+                # Para Dropout, seleccionar caso prototípico que ilustra convergencia PRISM (Course=9991, Tuition=0)
+                if clase_objetivo == 'Dropout':
+                    if estudiante.get('Course') == 9991 and estudiante.get('Tuition fees up to date') == 0:
+                        caso_seleccionado = estudiante
+                        break
+                    elif materias_aprobadas_val <= 1 and promedio_notas_val <= 8.0:
+                        if caso_seleccionado is None:
+                            caso_seleccionado = estudiante
+                    continue
 
-                self.entry_prom.delete(0, tk.END)
-                self.entry_prom.insert(0, str(est.get('Curricular units 1st sem (grade)', 0)))
+                # Para Graduate, seleccionar caso prototípico de alto rendimiento
+                if clase_objetivo == 'Graduate':
+                    if materias_aprobadas_val >= 5 and promedio_notas_val >= 12.0:
+                        caso_seleccionado = estudiante
+                        break
+                    continue
 
-                deudor_val = int(est.get('Debtor', 0))
-                self.combo_deudor.current(deudor_val)
+                # Para Enrolled, seleccionar caso prototípico regular
+                if clase_objetivo == 'Enrolled':
+                    if 2 <= materias_aprobadas_val <= 5:
+                        caso_seleccionado = estudiante
+                        break
+                    continue
 
-                pagos_val = int(est.get('Tuition fees up to date', 1))
-                idx_pagos = 0 if pagos_val == 1 else 1
-                self.combo_pagos.current(idx_pagos)
+        if caso_seleccionado is None:
+            for estudiante in self.datos_prueba:
+                if estudiante.get('Target') == clase_objetivo:
+                    caso_seleccionado = estudiante
+                    break
 
-                self.accion_diagnosticar_formulario(target_real=clase_objetivo)
-                break
+        if caso_seleccionado:
+            self.entry_adm.delete(0, tk.END)
+            self.entry_adm.insert(0, str(caso_seleccionado.get('Admission grade', 100)))
+
+            self.entry_aprob.delete(0, tk.END)
+            self.entry_aprob.insert(0, str(caso_seleccionado.get('Curricular units 1st sem (approved)', 0)))
+
+            self.entry_prom.delete(0, tk.END)
+            self.entry_prom.insert(0, str(caso_seleccionado.get('Curricular units 1st sem (grade)', 0)))
+
+            carrera_id = int(caso_seleccionado.get('Course', 9991))
+            texto_carrera = DICCIONARIO_CARRERAS.get(carrera_id, f"{carrera_id} - Carrera {carrera_id}")
+            self.combo_carrera.set(texto_carrera)
+
+            pagos_val = int(caso_seleccionado.get('Tuition fees up to date', 1))
+            idx_pagos = 0 if pagos_val == 1 else 1
+            self.combo_pagos.current(idx_pagos)
+
+            self.accion_diagnosticar_formulario(target_real=clase_objetivo)
 
     def accion_diagnosticar_formulario(self, target_real=None):
         try:
-            nota = float(self.entry_adm.get())
-            aprob = float(self.entry_aprob.get())
-            prom = float(self.entry_prom.get())
-            deudor = int(self.combo_deudor.get().split()[0])
-            pagos = int(self.combo_pagos.get().split()[0])
+            nota_admision = float(self.entry_adm.get())
+            materias_aprobadas = float(self.entry_aprob.get())
+            promedio_notas = float(self.entry_prom.get())
+
+            carrera_str = self.combo_carrera.get().strip()
+            if not carrera_str:
+                carrera_str = DICCIONARIO_CARRERAS[9991]
+                self.combo_carrera.set(carrera_str)
+            carrera_codigo = int(carrera_str.split()[0])
+
+            pagos_str = self.combo_pagos.get().strip()
+            if not pagos_str:
+                pagos_str = "1"
+            pagos_val = int(pagos_str.split()[0])
         except ValueError:
             messagebox.showerror("Error", "Por favor ingresa números válidos en las notas.")
             return
 
-        riesgo, det = evaluar_motor_difuso(nota, aprob, prom, self.parametros_difusos, 100, reglas=self.reglas_difusas)
-        alerta_prism = (deudor == 1 and pagos == 0) or (pagos == 0 and aprob <= 1)
+        estudiante_eval = {
+            'Admission grade': nota_admision,
+            'Curricular units 1st sem (approved)': materias_aprobadas,
+            'Curricular units 1st sem (grade)': promedio_notas,
+            'Course': carrera_codigo,
+            'Tuition fees up to date': pagos_val,
+            'Debtor': 1 if pagos_val == 0 else 0
+        }
+
+        # PILAR 1: Inferencia Difusa Mamdani Cuantitativa (Notas y Asignaturas)
+        riesgo, det = evaluar_motor_difuso(
+            nota_admision, materias_aprobadas, promedio_notas, self.parametros_difusos, 100, reglas=self.reglas_difusas
+        )
+
+        # PILAR 2: Reglas Causales PRISM Dinámicas (Supervisadas desde el Dataset)
+        if not self.reglas_prism and self.datos_entrenamiento:
+            self.reglas_prism, _ = ejecutar_prism(self.datos_entrenamiento, clase_objetivo='Dropout', semilla=42)
+
+        reglas_prism_disparadas = []
+        if self.reglas_prism:
+            for regla in self.reglas_prism:
+                cumple_todas = True
+                for atributo, valor_esperado in regla['condiciones']:
+                    valor_estudiante = estudiante_eval.get(atributo)
+                    if valor_estudiante != valor_esperado and str(valor_estudiante) != str(valor_esperado):
+                        cumple_todas = False
+                        break
+                if cumple_todas:
+                    reglas_prism_disparadas.append(regla)
+
+        alerta_prism = len(reglas_prism_disparadas) > 0
+
+        # PILAR 3: Minería de Asociación Apriori
+        reglas_apriori_disparadas = []
+        if self.reglas_apriori:
+            items_estudiante = extraer_items_estudiante_apriori(estudiante_eval, incluir_target=False)
+            for regla in self.reglas_apriori:
+                if regla['antecedente'].issubset(items_estudiante):
+                    reglas_apriori_disparadas.append(regla)
+
+        # Nombre legible de la carrera seleccionada
+        nombre_carrera = DICCIONARIO_CARRERAS.get(carrera_codigo, f"Carrera {carrera_codigo}")
+        estado_pagos_txt = "Al Día (Sin Cuotas Vencidas)" if pagos_val == 1 else "Atrasado (Cuotas Pendientes de Matrícula)"
+
+        # Actualizar Tarjetas Visuales de Síntesis Híbrida en Tiempo Real
+        if hasattr(self, 'lbl_tarjeta_difuso'):
+            color_difuso = "#d13438" if riesgo >= 0.5 else "#107c41"
+            estado_dif_txt = "Alto Riesgo Académico" if riesgo >= 0.5 else "Bajo Riesgo Académico"
+            self.lbl_tarjeta_difuso.config(
+                text=f"📚 Riesgo Académico (Mamdani): {riesgo*100:.2f}% ({estado_dif_txt})",
+                fg=color_difuso
+            )
+
+        if hasattr(self, 'lbl_tarjeta_prism'):
+            if alerta_prism:
+                top_conf_pct = max(r['confianza'] for r in reglas_prism_disparadas) * 100
+                self.lbl_tarjeta_prism.config(
+                    text=f"⚠️ Causal PRISM: Matrícula Atrasada ({top_conf_pct:.1f}% probabilidad de abandono)",
+                    fg="#d13438"
+                )
+            else:
+                self.lbl_tarjeta_prism.config(
+                    text="✓ Causal PRISM: Matrícula al Día (Solvente)",
+                    fg="#107c41"
+                )
+
+        if hasattr(self, 'lbl_tarjeta_veredicto'):
+            if riesgo >= 0.5 and alerta_prism:
+                txt_v = "🚨 CONVERGENCIA CRÍTICA (Académica + Financiera)"
+                col_v = "#b71c1c"
+            elif riesgo >= 0.5:
+                txt_v = "⚠️ ALERTA ACADÉMICA PURA (Notas bajas, solvente)"
+                col_v = "#d13438"
+            elif alerta_prism:
+                txt_v = "⚠️ ALERTA FINANCIERA (Rescatado por PRISM)"
+                col_v = "#8a1c14"
+            else:
+                txt_v = "🛡️ ESTUDIANTE SEGURO (Bajo Riesgo)"
+                col_v = "#107c41"
+            self.lbl_tarjeta_veredicto.config(text=f"Diagnóstico: {txt_v}", fg=col_v)
 
         self.txt_diagnostico.delete('1.0', tk.END)
         self.txt_diagnostico.insert(tk.END, "=" * 95 + "\n")
         self.txt_diagnostico.insert(tk.END, "  INFORME DE DIAGNÓSTICO EXPLICABLE (XAI) - SISTEMA HÍBRIDO DE INTELIGENCIA ARTIFICIAL\n")
         self.txt_diagnostico.insert(tk.END, "=" * 95 + "\n\n")
 
-        self.txt_diagnostico.insert(tk.END, f"Perfil del Estudiante: Admisión = {nota:.1f}/200 | Aprobadas S1 = {aprob:.0f} materias | Promedio S1 = {prom:.2f}/20 pts\n")
-        self.txt_diagnostico.insert(tk.END, f"Factores Administrativos: Deudor = {deudor} ({'Tiene Deuda' if deudor==1 else 'Sin Deudas'}) | Colegiatura al Día = {pagos} ({'Al Día' if pagos==1 else 'Atrasado'})\n")
+        self.txt_diagnostico.insert(tk.END, f"Perfil del Estudiante Evaluado:\n")
+        self.txt_diagnostico.insert(tk.END, f"  - Nota de Admisión:            {nota_admision:.1f} / 200 pts\n")
+        self.txt_diagnostico.insert(tk.END, f"  - Materias Aprobadas S1:       {materias_aprobadas:.0f} asignaturas\n")
+        self.txt_diagnostico.insert(tk.END, f"  - Promedio de Notas S1:        {promedio_notas:.2f} / 20 pts\n")
+        self.txt_diagnostico.insert(tk.END, f"  - Carrera Universitaria:       {nombre_carrera}\n")
+        self.txt_diagnostico.insert(tk.END, f"  - Situación de Matrícula:      {estado_pagos_txt}\n")
         if target_real:
-            self.txt_diagnostico.insert(tk.END, f"Condición Real Verificada en Dataset: {target_real}\n\n")
+            self.txt_diagnostico.insert(tk.END, f"  - Condición Real Verificada:   {target_real}\n\n")
         else:
             self.txt_diagnostico.insert(tk.END, "\n")
 
         # DESARROLLO EXPLICABLE DE LOS 4 PASOS CANÓNICOS DE LA LÓGICA DIFUSA MAMDANI
         texto_4_pasos = describir_los_4_pasos_difusos(
-            nota, aprob, prom, self.parametros_difusos, detalle_motor=det, reglas=self.reglas_difusas
+            nota_admision, materias_aprobadas, promedio_notas, self.parametros_difusos, detalle_motor=det, reglas=self.reglas_difusas
         )
         self.txt_diagnostico.insert(tk.END, texto_4_pasos + "\n\n")
 
         # PILAR 2: REGLAS CAUSALES PRISM
-        self.txt_diagnostico.insert(tk.END, "[PILAR 2: EVALUACIÓN DE REGLAS CAUSALES PRISM (FACTORES ADMINISTRATIVOS)]\n")
+        self.txt_diagnostico.insert(tk.END, "[PILAR 2: EVALUACIÓN DE REGLAS CAUSALES PRISM (EVALUACIÓN DINÁMICA DE CONOCIMIENTO)]\n")
         self.txt_diagnostico.insert(tk.END, "-" * 95 + "\n")
         if alerta_prism:
-            self.txt_diagnostico.insert(tk.END, "  ¡ALERTA CRÍTICA PRISM ACTIVADA!\n")
-            self.txt_diagnostico.insert(tk.END, f"  El estudiante presenta factores de alto riesgo administrativo detectados por PRISM:\n")
-            self.txt_diagnostico.insert(tk.END, f"  - Estado de Deuda: {'Deudor Activo' if deudor==1 else 'Sin deuda'}\n")
-            self.txt_diagnostico.insert(tk.END, f"  - Pagos de Matrícula/Colegiatura: {'Atrasado' if pagos==0 else 'Al día'}\n")
-            self.txt_diagnostico.insert(tk.END, f"  - Rendimiento Primer Semestre: {aprob:.0f} materias aprobadas\n")
-            self.txt_diagnostico.insert(tk.END, "  Conclusión Causal: Aunque las notas no fuesen críticas, el bloqueo administrativo\n")
-            self.txt_diagnostico.insert(tk.END, "  conduce a una probabilidad casi segura de deserción institucional forzosa.\n\n")
+            self.txt_diagnostico.insert(tk.END, f"  ¡ALERTA CRÍTICA PRISM ACTIVADA! (Se activaron {len(reglas_prism_disparadas)} regla(s) de conocimiento):\n")
+            for idx_regla, r_disp in enumerate(reglas_prism_disparadas, 1):
+                partes_c = [f"({traducir_atributo(a)} = '{v}')" for a, v in r_disp['condiciones']]
+                formula_c = " AND ".join(partes_c)
+                conf_pct = r_disp['confianza'] * 100
+                sop_pct = r_disp['soporte'] * 100
+                cob_casos = r_disp['cobertura']
+                lift_val = r_disp['lift']
+                self.txt_diagnostico.insert(tk.END, f"  -> Regla PRISM #{idx_regla}: SI {formula_c} ENTONCES Deserción = 'Sí'\n")
+                self.txt_diagnostico.insert(tk.END, f"     Métricas de Inducción: Confianza = {conf_pct:.2f}% | Cobertura Histórica = {cob_casos} casos | Soporte = {sop_pct:.2f}% | Lift = {lift_val:.4f}\n")
+            top_conf = max(r['confianza'] for r in reglas_prism_disparadas) * 100
+            self.txt_diagnostico.insert(tk.END, f"\n  Explicación Causal e Institucional:\n")
+            self.txt_diagnostico.insert(tk.END, f"  El estudiante cursa la carrera de {nombre_carrera} con estado de matrícula '{estado_pagos_txt}'.\n")
+            self.txt_diagnostico.insert(tk.END, f"  El algoritmo PRISM demostró matemáticamente sobre el conjunto de entrenamiento que el {top_conf:.2f}% de los\n")
+            self.txt_diagnostico.insert(tk.END, f"  estudiantes bajo este patrón causal de atraso financiero abandonaron la universidad.\n\n")
         else:
-            self.txt_diagnostico.insert(tk.END, "  Sin alertas administrativas de PRISM.\n")
-            self.txt_diagnostico.insert(tk.END, "  El estudiante está al día con sus pagos y no registra deudas activas.\n\n")
+            self.txt_diagnostico.insert(tk.END, "  Sin alertas críticas en el módulo causal PRISM.\n")
+            self.txt_diagnostico.insert(tk.END, f"  El perfil del estudiante ({nombre_carrera}, Matrícula: {estado_pagos_txt}) no coincide con ninguna\n")
+            self.txt_diagnostico.insert(tk.END, "  de las reglas causales determinísticas de abandono obligatorio inducidas por el algoritmo PRISM.\n\n")
+
+        # PILAR 3: MINERÍA DE ASOCIACIÓN APRIORI
+        self.txt_diagnostico.insert(tk.END, "[PILAR 3: MINERÍA DE ASOCIACIÓN APRIORI (PATRONES FRECUENTES DE ASOCIACIÓN)]\n")
+        self.txt_diagnostico.insert(tk.END, "-" * 95 + "\n")
+        if reglas_apriori_disparadas:
+            self.txt_diagnostico.insert(tk.END, f"  El estudiante activa {len(reglas_apriori_disparadas)} regla(s) de asociación en Apriori:\n")
+            for idx_ap, r_ap in enumerate(reglas_apriori_disparadas[:3], 1):
+                ant_ap = " AND ".join(sorted(r_ap['antecedente']))
+                cons_ap = " AND ".join(sorted(r_ap['consecuente']))
+                conf_ap = r_ap['confianza'] * 100
+                sop_ap = r_ap.get('soporte', r_ap.get('soporte_regla', 0.0)) * 100
+                self.txt_diagnostico.insert(tk.END, f"  -> Patrón #{idx_ap}: SI [{ant_ap}] ENTONCES [{cons_ap}] (Conf={conf_ap:.1f}%, Sop={sop_ap:.1f}%)\n")
+            self.txt_diagnostico.insert(tk.END, "\n")
+        else:
+            self.txt_diagnostico.insert(tk.END, "  No se registran patrones atípicos de alta confianza en Apriori para este perfil individual.\n")
+            self.txt_diagnostico.insert(tk.END, "  (Nota: Para enriquecer los patrones globales, ejecuta 'Minería Apriori' en la Pestaña 1).\n\n")
 
         # SÍNTESIS Y VEREDICTO FINAL DEL SISTEMA HÍBRIDO
         self.txt_diagnostico.insert(tk.END, "[SÍNTESIS DIAGNÓSTICA Y VEREDICTO FINAL DEL SISTEMA HÍBRIDO (XAI)]\n")
@@ -1694,15 +1905,16 @@ class AplicacionDesercion:
             pred = "Dropout (Alto Riesgo de Deserción)"
             color_txt = "PELIGRO DE ABANDONO DETECTADO"
             if riesgo >= 0.5 and alerta_prism:
-                motivo = "Convergencia Crítica: Alto riesgo académico en el Motor Difuso Y causal administrativa PRISM."
+                motivo = "Convergencia Crítica: Alto riesgo académico continuo en Motor Difuso Y causal administrativo-institucional PRISM."
             elif riesgo >= 0.5:
-                motivo = "Alerta Académica: Bajo rendimiento cuantitativo detectado por el Motor Difuso Mamdani."
+                motivo = "Alerta Académica Pura: Bajo rendimiento cuantitativo en asignaturas y calificaciones según Inferencia Difusa Mamdani (El estudiante está al día financieramente, pero reprueba académicamente)."
             else:
-                motivo = "Alerta Administrativa: Rescatado por Regla Causal PRISM (Deuda o retraso en pagos)."
+                top_conf_pct = max(r['confianza'] for r in reglas_prism_disparadas) * 100
+                motivo = f"Alerta Administrativo-Institucional: Activación de Regla Causal PRISM ({top_conf_pct:.1f}% de certeza histórica por matrícula impaga, a pesar de tener notas aprobatorias)."
         else:
             pred = "No Dropout (Bajo Riesgo / Continuará)"
             color_txt = "ESTUDIANTE SEGURO"
-            motivo = "Rendimiento académico satisfactorio y ausencia de causales administrativas de deserción."
+            motivo = "Rendimiento académico satisfactorio y ausencia de causales administrativas o institucionales de deserción."
 
         self.txt_diagnostico.insert(tk.END, f"  Estado General:    {color_txt}\n")
         self.txt_diagnostico.insert(tk.END, f"  Predicción Final:  {pred}\n")
@@ -1715,9 +1927,11 @@ class AplicacionDesercion:
 
         # Guardar estado para redibujo y renderizar en canvas de diagnóstico (4 paneles completos)
         self.ultimo_caso_diagnostico = {
-            'nota': nota,
-            'aprob': aprob,
-            'prom': prom,
+            'nota_admision': nota_admision,
+            'materias_aprobadas': materias_aprobadas,
+            'promedio_notas': promedio_notas,
+            'carrera': carrera_codigo,
+            'pagos': pagos_val,
             'fuerzas': det['fuerzas'],
             'parametros': self.parametros_difusos,
             'riesgo': riesgo,
@@ -1822,38 +2036,38 @@ class AplicacionDesercion:
 
         verdaderos_positivos_difuso = res_difuso['vp']
 
-        for est in self.datos_prueba:
-            nota = float(est.get('Admission grade', 100))
-            aprob = float(est.get('Curricular units 1st sem (approved)', 0))
-            prom = float(est.get('Curricular units 1st sem (grade)', 0))
-            target_real = est.get('Target', '')
-            es_desertor_real = (target_real == 'Dropout')
+        for estudiante in self.datos_prueba:
+            nota_admision = float(estudiante.get('Admission grade', 100))
+            materias_aprobadas = float(estudiante.get('Curricular units 1st sem (approved)', 0))
+            promedio_notas = float(estudiante.get('Curricular units 1st sem (grade)', 0))
+            condicion_real_estudiante = estudiante.get('Target', '')
+            es_desertor_real = (condicion_real_estudiante == 'Dropout')
 
             riesgo, _ = evaluar_motor_difuso(
-                nota, aprob, prom, self.parametros_difusos, 100, reglas=self.reglas_difusas
+                nota_admision, materias_aprobadas, promedio_notas, self.parametros_difusos, 100, reglas=self.reglas_difusas
             )
-            pred_dif = (riesgo >= 0.5)
+            prediccion_difusa = (riesgo >= 0.5)
 
             activa_prism = False
             if self.reglas_prism:
-                for r in self.reglas_prism:
+                for regla in self.reglas_prism:
                     cumple = True
-                    for attr, val in r['condiciones']:
-                        v_est = est.get(attr)
-                        if v_est != val and str(v_est) != str(val):
+                    for atributo, valor in regla['condiciones']:
+                        valor_estudiante = estudiante.get(atributo)
+                        if valor_estudiante != valor and str(valor_estudiante) != str(valor):
                             cumple = False
                             break
                     if cumple:
                         activa_prism = True
                         break
 
-            pred_hib = pred_dif or activa_prism
+            prediccion_hibrida = prediccion_difusa or activa_prism
 
-            if pred_hib and es_desertor_real:
+            if prediccion_hibrida and es_desertor_real:
                 verdaderos_positivos_hibrido += 1
-            elif pred_hib and not es_desertor_real:
+            elif prediccion_hibrida and not es_desertor_real:
                 falsos_positivos_hibrido += 1
-            elif not pred_hib and not es_desertor_real:
+            elif not prediccion_hibrida and not es_desertor_real:
                 verdaderos_negativos_hibrido += 1
             else:
                 falsos_negativos_hibrido += 1
