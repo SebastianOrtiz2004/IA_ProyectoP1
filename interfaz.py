@@ -1593,15 +1593,12 @@ class AplicacionDesercion:
 
         ttk.Separator(frame_izq, orient=tk.HORIZONTAL).pack(fill=tk.X, padx=10, pady=10)
 
-        ttk.Label(frame_izq, text="Cargar Casos Reales del Dataset:").pack(anchor=tk.W, padx=10, pady=2)
-        btn_caso_drop = ttk.Button(frame_izq, text="🧑‍🎓 Cargar Caso: Desertor Real (Dropout)", command=lambda: self.cargar_ejemplo_clase('Dropout'))
-        btn_caso_drop.pack(fill=tk.X, padx=10, pady=2)
+        ttk.Label(frame_izq, text="Cargar Casos Reales (Clases Binarias):").pack(anchor=tk.W, padx=10, pady=(6, 2))
+        btn_caso_drop = ttk.Button(frame_izq, text="🚨 Cargar Caso Real: Desertor (Dropout)", command=lambda: self.cargar_ejemplo_clase('Dropout'))
+        btn_caso_drop.pack(fill=tk.X, padx=10, pady=3)
 
-        btn_caso_grad = ttk.Button(frame_izq, text="🎓 Cargar Caso: Graduado Real (Graduate)", command=lambda: self.cargar_ejemplo_clase('Graduate'))
-        btn_caso_grad.pack(fill=tk.X, padx=10, pady=2)
-
-        btn_caso_enr = ttk.Button(frame_izq, text="📚 Cargar Caso: Matriculado Real (Enrolled)", command=lambda: self.cargar_ejemplo_clase('Enrolled'))
-        btn_caso_enr.pack(fill=tk.X, padx=10, pady=2)
+        btn_caso_grad = ttk.Button(frame_izq, text="🎓 Cargar Caso Real: No Desertor (Graduate)", command=lambda: self.cargar_ejemplo_clase('Graduate'))
+        btn_caso_grad.pack(fill=tk.X, padx=10, pady=3)
 
         frame_der = ttk.LabelFrame(parent, text="Informe Explicable del Sistema Híbrido (XAI)")
         frame_der.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -1698,13 +1695,6 @@ class AplicacionDesercion:
                 # Para Graduate, seleccionar caso prototípico de alto rendimiento
                 if clase_objetivo == 'Graduate':
                     if materias_aprobadas_val >= 5 and promedio_notas_val >= 12.0:
-                        caso_seleccionado = estudiante
-                        break
-                    continue
-
-                # Para Enrolled, seleccionar caso prototípico regular
-                if clase_objetivo == 'Enrolled':
-                    if 2 <= materias_aprobadas_val <= 5:
                         caso_seleccionado = estudiante
                         break
                     continue
