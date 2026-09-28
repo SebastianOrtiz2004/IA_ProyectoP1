@@ -1,35 +1,17 @@
-# =============================================================================
-# ARCHIVO: diagnostico.py
-# Descripción: Diagnóstico explicable (XAI) y evaluación con matriz de confusión
-# Características:
-#   - Combina los 3 pilares: Difuso Mamdani, Reglas PRISM y Patrones Apriori.
-#   - Matriz de confusión con nombres de variables completos en español.
-#   - Sin abreviaturas confusas: verdaderos_positivos, falsos_positivos, etc.
-# =============================================================================
 from difuso import evaluar_motor_difuso, describir_los_4_pasos_difusos
 from apriori import extraer_items_estudiante_apriori
 
 def diagnosticar_estudiante_integral(estudiante, parametros, reglas_prism=None, reglas_apriori=None, reglas_difusas=None):
-    """
-    DIAGNÓSTICO EXPLICABLE INTEGRAL (XAI):
-    Explica de forma clara el por qué del riesgo de un estudiante cruzando los 3 pilares:
-      Pilar 1. Motor Difuso Mamdani: Evalúa notas y materias continuas -> Índice de Riesgo [0.0 a 1.0]
-      Pilar 2. Reglas Causal PRISM: Identifica causales discretas (deudas, situación de matrícula)
-      Pilar 3. Patrones Apriori: Describe el perfil del estudiante según grupos frecuentes
-      Pilar 4. Síntesis y Veredicto Explicable
-    """
     nota_admision = float(estudiante.get('Admission grade', 100))
     materias_aprobadas = float(estudiante.get('Curricular units 1st sem (approved)', 0))
     promedio_notas = float(estudiante.get('Curricular units 1st sem (grade)', 0))
     target_real = estudiante.get('Target', '?')
 
-    # PILAR 1: Inferencia Difusa
     riesgo_calculado, detalle = evaluar_motor_difuso(
         nota_admision, materias_aprobadas, promedio_notas, parametros,
         numero_puntos=100, reglas=reglas_difusas
     )
 
-    # PILAR 2: Reglas Causal-Administrativas de PRISM
     reglas_prism_activadas = []
     if reglas_prism:
         for regla in reglas_prism:
@@ -42,7 +24,6 @@ def diagnosticar_estudiante_integral(estudiante, parametros, reglas_prism=None, 
             if cumple_todas:
                 reglas_prism_activadas.append(regla)
 
-    # PILAR 3: Minería de Asociación Apriori
     reglas_apriori_activadas = []
     if reglas_apriori:
         items_estudiante = extraer_items_estudiante_apriori(estudiante, incluir_target=False)
@@ -50,14 +31,12 @@ def diagnosticar_estudiante_integral(estudiante, parametros, reglas_prism=None, 
             if regla['antecedente'].issubset(items_estudiante):
                 reglas_apriori_activadas.append(regla)
 
-    # REPORTE EN PANTALLA
     print("\n" + "=" * 70)
     print("  DIAGNÓSTICO EXPLICABLE INTEGRAL (XAI) - CASO ESTUDIANTE")
     print("=" * 70)
     print(f"  Perfil Académico: Nota Admisión={nota_admision:.1f}/200 | Aprobadas S1={materias_aprobadas:.0f} | Promedio S1={promedio_notas:.2f}/20")
     print(f"  Target Real: {target_real}")
 
-    # REPORTE DE LOS 4 PASOS CANÓNICOS DEL MOTOR DIFUSO MAMDANI
     print("\n" + describir_los_4_pasos_difusos(
         nota_admision, materias_aprobadas, promedio_notas, parametros,
         detalle_motor=detalle, reglas=reglas_difusas
@@ -118,35 +97,20 @@ def diagnosticar_estudiante_integral(estudiante, parametros, reglas_prism=None, 
 
 
 def diagnosticar_estudiante(estudiante, parametros):
-    """Función para compatibilidad rápida."""
     return diagnosticar_estudiante_integral(estudiante, parametros)
 
 
 def evaluar_en_prueba(datos_prueba, parametros, reglas_prism=None, reglas_difusas=None):
-    """
-    EVALUACIÓN FINAL EN DATOS DE PRUEBA:
-    Calcula la matriz de confusión y las métricas para:
-      1. El modelo Solo Difuso (basado únicamente en notas).
-      2. El Sistema Híbrido Unificado (Lógica Difusa + Reglas Causales PRISM).
-
-    Nombres claros de variables:
-      - verdaderos_positivos: Estudiantes que sí desertaron y fueron detectados correctamente.
-      - falsos_positivos: Estudiantes que continuaron, pero se dio una falsa alarma de deserción.
-      - verdaderos_negativos: Estudiantes que continuaron y el sistema predijo que continuarían.
-      - falsos_negativos: Estudiantes que desertaron pero el sistema no los detectó a tiempo.
-    """
     print("\n" + "=" * 70)
     print("  PASO 6: EVALUACIÓN FINAL EN DATOS DE PRUEBA")
     print("  (Evaluación Unificada del Sistema Híbrido: Difuso Mamdani + Causal PRISM)")
     print("=" * 70)
 
-    # Contadores de la Matriz de Confusión para el Sistema Híbrido
     verdaderos_positivos_hibrido = 0
     falsos_positivos_hibrido = 0
     verdaderos_negativos_hibrido = 0
     falsos_negativos_hibrido = 0
 
-    # Contadores de la Matriz de Confusión para el modelo Solo Difuso
     verdaderos_positivos_difuso = 0
     falsos_positivos_difuso = 0
     verdaderos_negativos_difuso = 0
@@ -159,11 +123,9 @@ def evaluar_en_prueba(datos_prueba, parametros, reglas_prism=None, reglas_difusa
         target_real = estudiante.get('Target', '')
         es_desertor_real = (target_real == 'Dropout')
 
-        # 1. Inferencia Difusa Mamdani
         riesgo, _ = evaluar_motor_difuso(nota, aprobadas, promedio, parametros, numero_puntos=100, reglas=reglas_difusas)
         prediccion_difuso_dropout = (riesgo >= 0.5)
 
-        # 2. Inferencia Simbólica PRISM
         activa_regla_prism = False
         if reglas_prism:
             for regla in reglas_prism:
@@ -177,10 +139,8 @@ def evaluar_en_prueba(datos_prueba, parametros, reglas_prism=None, reglas_difusa
                     activa_regla_prism = True
                     break
 
-        # 3. Predicción del Sistema Híbrido Unificado (OR lógico)
         prediccion_hibrido_dropout = prediccion_difuso_dropout or activa_regla_prism
 
-        # Actualizar contadores de la matriz para Solo Difuso
         if prediccion_difuso_dropout and es_desertor_real:
             verdaderos_positivos_difuso += 1
         elif prediccion_difuso_dropout and not es_desertor_real:
@@ -190,7 +150,6 @@ def evaluar_en_prueba(datos_prueba, parametros, reglas_prism=None, reglas_difusa
         else:
             falsos_negativos_difuso += 1
 
-        # Actualizar contadores de la matriz para el Sistema Híbrido
         if prediccion_hibrido_dropout and es_desertor_real:
             verdaderos_positivos_hibrido += 1
         elif prediccion_hibrido_dropout and not es_desertor_real:
@@ -202,7 +161,6 @@ def evaluar_en_prueba(datos_prueba, parametros, reglas_prism=None, reglas_difusa
 
     total_estudiantes_prueba = len(datos_prueba)
 
-    # Cálculo de métricas del Sistema Híbrido
     if total_estudiantes_prueba > 0:
         exactitud_hibrido = (verdaderos_positivos_hibrido + verdaderos_negativos_hibrido) / total_estudiantes_prueba
     else:
@@ -220,7 +178,6 @@ def evaluar_en_prueba(datos_prueba, parametros, reglas_prism=None, reglas_difusa
     else:
         precision_hibrido = 0.0
 
-    # Cálculo de métricas para Solo Difuso
     if total_estudiantes_prueba > 0:
         exactitud_difuso = (verdaderos_positivos_difuso + verdaderos_negativos_difuso) / total_estudiantes_prueba
     else:
@@ -232,7 +189,6 @@ def evaluar_en_prueba(datos_prueba, parametros, reglas_prism=None, reglas_difusa
     else:
         sensibilidad_difuso = 0.0
 
-    # Demostración detallada del desempeño del Motor Difuso en los 885 datos de prueba
     res_difuso = evaluar_rendimiento_motor_difuso(datos_prueba, parametros, reglas_difusas=reglas_difusas)
     print("\n" + formatear_reporte_demostracion_motor_difuso(res_difuso, es_calibrado=False))
 
@@ -259,10 +215,6 @@ def evaluar_en_prueba(datos_prueba, parametros, reglas_prism=None, reglas_difusa
 
 
 def evaluar_rendimiento_motor_difuso(datos_prueba, parametros, reglas_difusas=None):
-    """
-    Evalúa minuciosamente el desempeño exclusivo del Motor Difuso Mamdani
-    sobre los 885 datos de prueba que el sistema nunca vio en entrenamiento.
-    """
     total = len(datos_prueba)
     vp = 0
     vn = 0
@@ -328,10 +280,6 @@ def evaluar_rendimiento_motor_difuso(datos_prueba, parametros, reglas_difusas=No
 
 
 def formatear_reporte_demostracion_motor_difuso(res_difuso, es_calibrado=False):
-    """
-    Construye el informe exhaustivo que demuestra de forma transparente
-    qué tanto sirve el Motor Difuso Mamdani sobre los 885 datos de prueba.
-    """
     total = res_difuso['total']
     vp = res_difuso['vp']
     vn = res_difuso['vn']

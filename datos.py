@@ -1,16 +1,7 @@
-# =============================================================================
-# ARCHIVO: datos.py
-# Descripción: Lectura del archivo CSV y partición en entrenamiento y prueba
-# =============================================================================
 import csv
 import random
 
 def cargar_dataset(ruta_archivo):
-    """
-    Lee el archivo CSV de estudiantes separado por punto y coma (;).
-    Convierte cada fila en un diccionario con sus nombres de columnas.
-    Convierte los números a float o int para poder operar con ellos.
-    """
     lista_estudiantes = []
     with open(ruta_archivo, encoding='utf-8-sig') as archivo:
         lector_csv = csv.DictReader(archivo, delimiter=';')
@@ -31,12 +22,6 @@ def cargar_dataset(ruta_archivo):
 
 
 def partir_dataset(lista_estudiantes, porcentaje_entrenamiento=0.80, semilla=42):
-    """
-    Divide los estudiantes en dos grupos:
-      - 80% para entrenamiento (aprender reglas y calibrar funciones)
-      - 20% para prueba (evaluar aciertos finales)
-    Usa una semilla fija (42) para que siempre salgan los mismos datos.
-    """
     random.seed(semilla)
     indices = list(range(len(lista_estudiantes)))
     random.shuffle(indices)
@@ -57,19 +42,6 @@ def partir_dataset(lista_estudiantes, porcentaje_entrenamiento=0.80, semilla=42)
 
 
 def obtener_muestra_estratificada(lista_estudiantes, tam_muestra=400, columna_clase='Target', semilla=42, retornar_cuotas=False):
-    """
-    Extrae una submuestra representativa mediante Muestreo Estratificado (Stratified Sampling).
-    Garantiza que la proporción de cada clase ('Dropout', 'Graduate', 'Enrolled') en la
-    submuestra sea exactamente proporcional a su distribución en la población original,
-    evitando sesgos de muestreo en el cálculo de aptitud (fitness) del Algoritmo Genético.
-
-    Parámetros:
-      - lista_estudiantes: lista completa de estudiantes (ej. conjunto de entrenamiento).
-      - tam_muestra: tamaño objetivo de la muestra (ej. 400).
-      - columna_clase: nombre de la columna objetivo ('Target').
-      - semilla: semilla aleatoria para reproducibilidad experimental.
-      - retornar_cuotas: booleano; si es True retorna tupla (muestra, dict_cuotas).
-    """
     if tam_muestra >= len(lista_estudiantes):
         cuotas = {}
         for estudiante in lista_estudiantes:
@@ -89,7 +61,6 @@ def obtener_muestra_estratificada(lista_estudiantes, tam_muestra=400, columna_cl
         proporcion = len(grupo) / total_poblacion
         cuotas[clase] = int(round(proporcion * tam_muestra))
 
-    # Ajuste por redondeo si la suma difiere ligeramente de tam_muestra
     diferencia = tam_muestra - sum(cuotas.values())
     if diferencia != 0:
         clase_mayoritaria = max(estratos.keys(), key=lambda clase_nombre: len(estratos[clase_nombre]))

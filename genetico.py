@@ -1,13 +1,3 @@
-# =============================================================================
-# ARCHIVO: genetico.py
-# Descripción: Algoritmo Genético para calibrar las funciones de pertenencia difusas
-# Características:
-#   - Cromosoma de 19 genes (solo los parámetros que realmente varían).
-#   - Extremos fijos: a=0, b=0 para conjuntos iniciales; c=max, d=max para conjuntos finales.
-#   - Reparación geométrica: Ordena los puntos para que nunca haya funciones invertidas.
-#   - Ruleta discreta de 100 casillas proporcional al fitness.
-#   - Cruce en 1 punto con probabilidad 0.85 y mutación con probabilidad 0.05 por gen.
-# =============================================================================
 import sys
 import random
 import time
@@ -22,54 +12,41 @@ if hasattr(sys.stderr, 'reconfigure'):
 
 LONGITUD_CROMOSOMA = 19
 
-# Rangos válidos mínimo y máximo para cada uno de los 19 genes
 LIMITES_GENES = [
-    # X1 Nota de Admisión (escala 0 a 200):
-    (60, 130),   # Gen 0: nota_adm_baja_c
-    (90, 160),   # Gen 1: nota_adm_baja_d
-    (70, 140),   # Gen 2: nota_adm_media_a
-    (100, 160),  # Gen 3: nota_adm_media_b
-    (120, 190),  # Gen 4: nota_adm_media_c
-    (110, 170),  # Gen 5: nota_adm_alta_a
-    (140, 195),  # Gen 6: nota_adm_alta_b
-
-    # X2 Materias Aprobadas (escala 0 a 26):
-    (0, 2),      # Gen 7: aprobadas_critica_c
-    (1, 5),      # Gen 8: aprobadas_critica_d
-    (0, 4),      # Gen 9: aprobadas_regular_a
-    (2, 6),      # Gen 10: aprobadas_regular_b
-    (4, 10),     # Gen 11: aprobadas_regular_c
-    (3, 8),      # Gen 12: aprobadas_completa_a
-    (5, 12),     # Gen 13: aprobadas_completa_b
-
-    # X3 Promedio Semestral (escala 0 a 20):
-    (3, 9),      # Gen 14: nota_sem_deficiente_c
-    (6, 14),     # Gen 15: nota_sem_deficiente_d
-    (5, 11),     # Gen 16: nota_sem_aceptable_a
-    (9, 15),     # Gen 17: nota_sem_aceptable_b
-    (12, 19),    # Gen 18: nota_sem_aceptable_c
+    (60, 130),
+    (90, 160),
+    (70, 140),
+    (100, 160),
+    (120, 190),
+    (110, 170),
+    (140, 195),
+    (0, 2),
+    (1, 5),
+    (0, 4),
+    (2, 6),
+    (4, 10),
+    (3, 8),
+    (5, 12),
+    (3, 9),
+    (6, 14),
+    (5, 11),
+    (9, 15),
+    (12, 19),
 ]
 
-# Definición de los bloques de genes correspondientes a cada figura geométrica
 BLOQUES_GENES = [
-    (0, 1, 'trapecio'),   # nota_adm_baja
-    (2, 4, 'triangulo'),  # nota_adm_media
-    (5, 6, 'trapecio'),   # nota_adm_alta
-    (7, 8, 'trapecio'),   # aprobadas_critica
-    (9, 11, 'triangulo'), # aprobadas_regular
-    (12, 13, 'trapecio'), # aprobadas_completa
-    (14, 15, 'trapecio'), # nota_sem_deficiente
-    (16, 18, 'triangulo'),# nota_sem_aceptable
+    (0, 1, 'trapecio'),
+    (2, 4, 'triangulo'),
+    (5, 6, 'trapecio'),
+    (7, 8, 'trapecio'),
+    (9, 11, 'triangulo'),
+    (12, 13, 'trapecio'),
+    (14, 15, 'trapecio'),
+    (16, 18, 'triangulo'),
 ]
 
 
 def reparar_geometria(cromosoma):
-    """
-    Garantiza que los puntos de cada función de pertenencia mantengan orden lógico:
-      - Primero verifica que cada gen no se salga de su rango mínimo y máximo.
-      - Luego ordena los puntos de cada conjunto para que no queden cruzados.
-      - En funciones triangulares asegura que a < b < c.
-    """
     cromosoma_reparado = list(cromosoma)
 
     for indice_inicio, indice_fin, tipo_figura in BLOQUES_GENES:
@@ -77,17 +54,14 @@ def reparar_geometria(cromosoma):
         for indice_gen in range(indice_inicio, indice_fin + 1):
             limite_inferior, limite_superior = LIMITES_GENES[indice_gen]
             valor_actual = cromosoma_reparado[indice_gen]
-            # Mantener dentro de límites
             if valor_actual < limite_inferior:
                 valor_actual = limite_inferior
             elif valor_actual > limite_superior:
                 valor_actual = limite_superior
             puntos_del_bloque.append(valor_actual)
 
-        # Ordenar los puntos
         puntos_del_bloque.sort()
 
-        # Separación mínima en triángulos para evitar bases planas
         if tipo_figura == 'triangulo':
             separacion_minima = 0.5
             for i in range(1, len(puntos_del_bloque)):
@@ -101,48 +75,36 @@ def reparar_geometria(cromosoma):
                     if puntos_del_bloque[i] >= puntos_del_bloque[i + 1]:
                         puntos_del_bloque[i] = puntos_del_bloque[i + 1] - separacion_minima
 
-        # Guardar los puntos corregidos
         posicion = 0
         for indice_gen in range(indice_inicio, indice_fin + 1):
             cromosoma_reparado[indice_gen] = puntos_del_bloque[posicion]
             posicion += 1
 
-    # -------------------------------------------------------------------------
-    # GARANTÍA DE PARTICIÓN DIFUSA RUSPINI (SIN VACÍOS NI ZONAS CIEGAS)
-    # Exige que los conjuntos lingüísticos contiguos se solapen continuamente:
-    # -------------------------------------------------------------------------
-    # 1. Variable X1: Nota de Admisión (0 a 200)
-    # Solapamiento Baja / Media:
     if cromosoma_reparado[1] < cromosoma_reparado[2] + 4.0:
         cromosoma_reparado[1] = min(LIMITES_GENES[1][1], cromosoma_reparado[2] + 5.0)
         if cromosoma_reparado[1] < cromosoma_reparado[0] + 2.0:
             cromosoma_reparado[0] = max(LIMITES_GENES[0][0], cromosoma_reparado[1] - 4.0)
-    # Solapamiento Media / Alta:
+
     if cromosoma_reparado[4] < cromosoma_reparado[5] + 4.0:
         cromosoma_reparado[4] = min(LIMITES_GENES[4][1], cromosoma_reparado[5] + 5.0)
         if cromosoma_reparado[4] < cromosoma_reparado[3] + 2.0:
             cromosoma_reparado[3] = max(LIMITES_GENES[3][0], cromosoma_reparado[4] - 3.0)
 
-    # 2. Variable X2: Materias Aprobadas (0 a 26)
-    # Solapamiento Crítica / Regular:
     if cromosoma_reparado[8] < cromosoma_reparado[9] + 1.0:
         cromosoma_reparado[8] = min(LIMITES_GENES[8][1], cromosoma_reparado[9] + 1.2)
         if cromosoma_reparado[8] < cromosoma_reparado[7]:
             cromosoma_reparado[7] = max(0.0, cromosoma_reparado[8] - 0.5)
-    # Solapamiento Regular / Completa:
+
     if cromosoma_reparado[11] < cromosoma_reparado[12] + 1.0:
         cromosoma_reparado[11] = min(LIMITES_GENES[11][1], cromosoma_reparado[12] + 1.2)
         if cromosoma_reparado[11] < cromosoma_reparado[10] + 0.5:
             cromosoma_reparado[10] = max(LIMITES_GENES[10][0], cromosoma_reparado[11] - 0.8)
 
-    # 3. Variable X3: Promedio Semestral (0 a 20)
-    # Triángulo Aceptable: evitar aplastamiento o pendiente vertical
     if cromosoma_reparado[17] < cromosoma_reparado[16] + 1.5:
         cromosoma_reparado[17] = min(LIMITES_GENES[17][1], cromosoma_reparado[16] + 1.8)
     if cromosoma_reparado[18] < cromosoma_reparado[17] + 1.5:
         cromosoma_reparado[18] = min(LIMITES_GENES[18][1], cromosoma_reparado[17] + 1.8)
 
-    # SOLAPAMIENTO DEFICIENTE / ACEPTABLE (Elimina la zona ciega / vacío de X3):
     if cromosoma_reparado[15] < cromosoma_reparado[16] + 1.2:
         cromosoma_reparado[15] = min(LIMITES_GENES[15][1], cromosoma_reparado[16] + 1.5)
         if cromosoma_reparado[15] < cromosoma_reparado[14] + 0.8:
@@ -152,27 +114,19 @@ def reparar_geometria(cromosoma):
 
 
 def cromosoma_a_params(cromosoma):
-    """
-    Convierte el vector de 19 números a un diccionario de parámetros difusos.
-    Los límites naturales fijos (0.0, 200.0, 26.0, 20.0) se agregan automáticamente.
-    """
     parametros = {
-        # X1 Nota Admisión: extremos 0.0 y 200.0
         'nota_adm_baja':   (0.0, 0.0, cromosoma[0], cromosoma[1]),
         'nota_adm_media':  (cromosoma[2], cromosoma[3], cromosoma[4]),
         'nota_adm_alta':   (cromosoma[5], cromosoma[6], 200.0, 200.0),
 
-        # X2 Aprobadas: extremos 0.0 y 26.0
         'aprobadas_critica':  (0.0, 0.0, cromosoma[7], cromosoma[8]),
         'aprobadas_regular':  (cromosoma[9], cromosoma[10], cromosoma[11]),
         'aprobadas_completa': (cromosoma[12], cromosoma[13], 26.0, 26.0),
 
-        # X3 Notas: extremos 0.0 y 20.0
         'nota_sem_deficiente':    (0.0, 0.0, cromosoma[14], cromosoma[15]),
         'nota_sem_aceptable':     (cromosoma[16], cromosoma[17], cromosoma[18]),
         'nota_sem_sobresaliente': (cromosoma[17], min(cromosoma[18] + 1.0, 20.0), 20.0, 20.0),
 
-        # Salida de Riesgo (0 a 1): Fijos estándar
         'riesgo_bajo':  (0.0, 0.0, 0.15, 0.35),
         'riesgo_medio': (0.25, 0.55, 0.75),
         'riesgo_alto':  (0.60, 0.80, 1.0, 1.0),
@@ -181,9 +135,6 @@ def cromosoma_a_params(cromosoma):
 
 
 def obtener_parametros_iniciales():
-    """
-    Parámetros iniciales aproximados 'a ojo' antes de que el Algoritmo Genético los optimice.
-    """
     return {
         'nota_adm_baja':          (0.0, 0.0, 95.0, 125.0),
         'nota_adm_media':         (95.0, 127.0, 155.0),
@@ -201,9 +152,6 @@ def obtener_parametros_iniciales():
 
 
 def params_a_cromosoma(p):
-    """
-    Extrae los 19 cortes variables del diccionario de parámetros difusos en el orden exacto del cromosoma.
-    """
     return [
         p['nota_adm_baja'][2], p['nota_adm_baja'][3],
         p['nota_adm_media'][0], p['nota_adm_media'][1], p['nota_adm_media'][2],
@@ -216,11 +164,8 @@ def params_a_cromosoma(p):
     ]
 
 
+# FASE 2: Evaluación de aptitud
 def calcular_fitness(cromosoma, lista_estudiantes, reglas=None):
-    """
-    Función de aptitud (Fitness): Calcula el porcentaje de aciertos (accuracy)
-    que obtiene el sistema difuso con los cortes de este cromosoma.
-    """
     parametros = cromosoma_a_params(cromosoma)
     cantidad_aciertos = 0
 
@@ -254,8 +199,8 @@ def calcular_fitness(cromosoma, lista_estudiantes, reglas=None):
         return 0.0
 
 
+# FASE 1: Población inicial
 def crear_individuo(semilla_aleatoria):
-    """Crea un cromosoma inicial aleatorio y lo repara para que nazca geométricamente válido."""
     random.seed(semilla_aleatoria)
     cromosoma = []
     for limite_inferior, limite_superior in LIMITES_GENES:
@@ -264,11 +209,8 @@ def crear_individuo(semilla_aleatoria):
     return reparar_geometria(cromosoma)
 
 
+# FASE 3: Selección por ruleta
 def construir_ruleta_100_slots(lista_aptitudes):
-    """
-    Construye la ruleta de 100 casillas proporcionales al fitness de cada individuo.
-    Cada casilla almacena el índice del individuo asignado.
-    """
     total_individuos = len(lista_aptitudes)
     ruleta = [None] * 100
     suma_total_fitness = sum(lista_aptitudes)
@@ -318,7 +260,6 @@ def construir_ruleta_100_slots(lista_aptitudes):
 
 
 def seleccionar_padres(ruleta):
-    """Gira la ruleta dos veces para escoger dos padres distintos."""
     padre1 = ruleta[random.randint(0, 99)]
     padre2 = ruleta[random.randint(0, 99)]
     intentos = 0
@@ -351,11 +292,8 @@ NOMBRES_GENES = [
 ]
 
 
+# FASE 4: Cruce
 def cruzar_y_reparar_detalle(padre1, padre2, prob_cruce=0.85):
-    """
-    Cruce en 1 punto aleatorio con probabilidad Pc.
-    Retorna (hijo1, hijo2, ocurrio_cruce, punto_corte).
-    """
     longitud = len(padre1)
     if random.random() <= prob_cruce:
         punto_corte = random.randint(1, longitud - 1)
@@ -374,17 +312,12 @@ def cruzar_y_reparar_detalle(padre1, padre2, prob_cruce=0.85):
 
 
 def cruzar_y_reparar(padre1, padre2, prob_cruce=0.85):
-    """Cruce en 1 punto aleatorio con probabilidad de 85% (versión estándar)."""
     h1, h2, _, _ = cruzar_y_reparar_detalle(padre1, padre2, prob_cruce)
     return h1, h2
 
 
+# FASE 5: Mutación
 def mutar_y_reparar_detalle(cromosoma, prob_mutacion=0.05):
-    """
-    Mutación gen a gen con probabilidad Pm.
-    Retorna (cromosoma_reparado, lista_mutaciones) donde cada mutación contiene:
-    (indice_gen, nombre_gen, valor_anterior, valor_nuevo).
-    """
     cromosoma_mutado = list(cromosoma)
     mutaciones = []
     for indice_gen in range(len(cromosoma_mutado)):
@@ -406,7 +339,6 @@ def mutar_y_reparar_detalle(cromosoma, prob_mutacion=0.05):
 
 
 def mutar_y_reparar(cromosoma, prob_mutacion=0.05):
-    """Mutación gen a gen con probabilidad del 5% (versión estándar)."""
     crom_rep, _ = mutar_y_reparar_detalle(cromosoma, prob_mutacion)
     return crom_rep
 
@@ -415,17 +347,6 @@ def ejecutar_algoritmo_genetico(datos_entrenamiento, N_pob=30, numero_generacion
                                  sin_mejora_max=60, Pc=0.85, Pm=0.05,
                                  reglas_difusas=None, tam_muestra=400,
                                  callback_progreso=None, N_gen=None):
-    """
-    Bucle principal del Algoritmo Genético con registro detallado generación a generación:
-      1. Genera población inicial de N_pob individuos y calcula aptitud.
-      2. En cada una de las generaciones registra:
-         - Elitismo (el mejor pasa intacto)
-         - Cada ciclo de selección de padres (ruleta de 100 slots)
-         - Cruce en 1 punto con su punto de corte k
-         - Mutación gen a gen indicando qué genes del cromosoma mutaron y cuánto
-         - Selección de individuos que forman la nueva población con sus fitness
-         - Estadísticas de la generación (Mejor fitness, Promedio, Mejora)
-    """
     if N_gen is not None:
         numero_generaciones = N_gen
 
@@ -444,11 +365,13 @@ def ejecutar_algoritmo_genetico(datos_entrenamiento, N_pob=30, numero_generacion
     print(f"  Distribución estratificada (Stratified Sampling): {detalles_estratos}")
 
     print(f"  Generando población inicial de {N_pob} cromosomas...")
+    # FASE 1: Población inicial
     poblacion = []
     for i in range(N_pob):
         poblacion.append(crear_individuo(i * 7 + 13))
 
     print("  Calculando aptitud de la población inicial...")
+    # FASE 2: Evaluación de aptitud
     aptitudes = []
     for ind in poblacion:
         aptitudes.append(calcular_fitness(ind, muestra_evaluacion, reglas=reglas_difusas))
@@ -467,9 +390,10 @@ def ejecutar_algoritmo_genetico(datos_entrenamiento, N_pob=30, numero_generacion
     print(f"  {'-' * 60}")
 
     for generacion in range(1, numero_generaciones + 1):
+        # FASE 3: Selección por ruleta
         ruleta = construir_ruleta_100_slots(aptitudes)
 
-        # 1. Elitismo: El mejor individuo pasa directo intacto
+        # FASE 6: Elitismo y Reemplazo
         nueva_poblacion = [list(mejor_cromosoma)]
         nuevas_aptitudes = [mejor_fitness]
         origenes_poblacion = [
@@ -484,18 +408,21 @@ def ejecutar_algoritmo_genetico(datos_entrenamiento, N_pob=30, numero_generacion
         cruces_de_la_generacion = []
         par_reproductivo = 0
 
-        # 2. Ciclos de Selección, Cruce y Mutación hasta llenar la población
         while len(nueva_poblacion) < N_pob:
             par_reproductivo += 1
+            # FASE 3: Selección por ruleta
             idx1, idx2 = seleccionar_padres(ruleta)
             padre1 = poblacion[idx1]
             padre2 = poblacion[idx2]
 
+            # FASE 4: Cruce
             h1, h2, ocurrio_cruce, punto_corte = cruzar_y_reparar_detalle(padre1, padre2, Pc)
+
+            # FASE 5: Mutación
             h1, mutaciones_h1 = mutar_y_reparar_detalle(h1, Pm)
             h2, mutaciones_h2 = mutar_y_reparar_detalle(h2, Pm)
 
-            # Evaluar y registrar Hijo 1
+            # FASE 2: Evaluación de aptitud
             f1 = calcular_fitness(h1, muestra_evaluacion, reglas=reglas_difusas)
             id_h1 = len(nueva_poblacion) + 1
             nueva_poblacion.append(h1)
@@ -507,7 +434,6 @@ def ejecutar_algoritmo_genetico(datos_entrenamiento, N_pob=30, numero_generacion
                 'mutado': bool(mutaciones_h1)
             })
 
-            # Evaluar y registrar Hijo 2 (si queda cupo)
             f2 = None
             id_h2 = None
             if len(nueva_poblacion) < N_pob:
@@ -557,7 +483,6 @@ def ejecutar_algoritmo_genetico(datos_entrenamiento, N_pob=30, numero_generacion
 
         historial.append(mejor_fitness)
 
-        # Estructura de datos completa de la generación
         datos_generacion = {
             'generacion': generacion,
             'total_generaciones': numero_generaciones,
@@ -567,8 +492,8 @@ def ejecutar_algoritmo_genetico(datos_entrenamiento, N_pob=30, numero_generacion
             'mejor_fitness_generacion': mejor_de_la_generacion,
             'mejor_fitness_historico': mejor_fitness,
             'fitness_promedio_generacion': media_de_la_generacion,
-            'mejor_fitness_gen': mejor_de_la_generacion,  # Compatibilidad
-            'fitness_promedio_gen': media_de_la_generacion,  # Compatibilidad
+            'mejor_fitness_gen': mejor_de_la_generacion,
+            'fitness_promedio_gen': media_de_la_generacion,
             'hubo_mejora': hubo_mejora,
             'estado': estado,
             'conteo_sin_mejora': conteo_sin_mejora
@@ -598,13 +523,6 @@ def ejecutar_algoritmo_genetico(datos_entrenamiento, N_pob=30, numero_generacion
 
 
 def formatear_detalle_generacion(datos_generacion):
-    """
-    Construye el reporte textual exhaustivo y real de una generación específica:
-    - Preservación por Elitismo
-    - Detalle paso a paso de cada par de padres, cruce, corte y mutación
-    - Población resultante con origen y fitness de cada individuo
-    - Estadísticas globales de la generación
-    """
     generacion = datos_generacion['generacion']
     total_generaciones = datos_generacion['total_generaciones']
     cruces = datos_generacion['cruces']
@@ -615,12 +533,10 @@ def formatear_detalle_generacion(datos_generacion):
     lineas.append(f"                 GENERACIÓN {generacion:02d} / {total_generaciones:02d} - REGISTRO COMPLETO PASO A PASO")
     lineas.append("=" * 100)
 
-    # 1. Elitismo
     lineas.append("\n[1] PRESERVACIÓN POR ELITISMO:")
     lineas.append(f"    El mejor cromosoma de la generación anterior pasa directo a la posición #01 sin alteraciones.")
     lineas.append(f"    • Individuo #01 (Élite): Fitness = {datos_generacion['elite_anterior_fitness']*100:5.2f}%\n")
 
-    # 2. Selección, Cruce y Mutación
     total_cruces_efectivos = sum(1 for c in cruces if c['cruce_realizado'])
     total_mutaciones = sum(len(c['hijo1_mutaciones']) + (len(c['hijo2_mutaciones']) if c['hijo2_id'] else 0) for c in cruces)
 
@@ -646,7 +562,6 @@ def formatear_detalle_generacion(datos_generacion):
 
         lineas.append(f"      • Reparación Geométrica: Corrección de límites y orden de vértices aplicada (0% inviables).")
 
-        # Mutación Hijo 1
         lineas.append(f"      • Operador de Mutación (Probabilidad Pm = 0.05 por gen del cromosoma):")
         muts1 = c['hijo1_mutaciones']
         if muts1:
@@ -656,7 +571,6 @@ def formatear_detalle_generacion(datos_generacion):
         else:
             lineas.append(f"          - Hijo 1 (Individuo #{c['hijo1_id']:02d}): NO MUTÓ (0 genes del cromosoma alterados)")
 
-        # Mutación Hijo 2
         if c['hijo2_id']:
             muts2 = c['hijo2_mutaciones']
             if muts2:
@@ -672,7 +586,6 @@ def formatear_detalle_generacion(datos_generacion):
             lineas.append(f"          - Individuo #{c['hijo2_id']:02d} (Hijo 2): Fitness = {c['hijo2_fitness']*100:5.2f}%")
         lineas.append("")
 
-    # 3. Población Resultante
     lineas.append(f"[3] SELECCIÓN DE INDIVIDUOS QUE CONFORMAN LA NUEVA POBLACIÓN ({len(pob)} Individuos):")
     lineas.append("-" * 100)
     lineas.append(f"   #   | Origen Genético                               | Fitness (%) | Condición")
@@ -682,7 +595,6 @@ def formatear_detalle_generacion(datos_generacion):
         lineas.append(f"  #{ind['id']:02d}  | {ind['origen']:<45} |     {ind['fitness']*100:5.2f}% | {condicion}")
     lineas.append("-" * 100)
 
-    # 4. Estadísticas
     mejor_fit_g = datos_generacion.get('mejor_fitness_generacion', datos_generacion.get('mejor_fitness_gen', 0.0))
     prom_fit_g = datos_generacion.get('fitness_promedio_generacion', datos_generacion.get('fitness_promedio_gen', 0.0))
     lineas.append(f"\n[4] ESTADÍSTICAS Y BALANCE DE LA GENERACIÓN {generacion:02d}:")
@@ -698,9 +610,6 @@ def formatear_detalle_generacion(datos_generacion):
 
 
 def formatear_resumen_general(registro_completo):
-    """
-    Construye la tabla resumen comparativa de todas las generaciones del algoritmo genético.
-    """
     lineas = []
     lineas.append("=" * 115)
     lineas.append("       RESUMEN EVOLUTIVO GENERAL DE TODAS LAS GENERACIONES DEL ALGORITMO GENÉTICO")
@@ -730,9 +639,6 @@ def formatear_resumen_general(registro_completo):
 
 
 def formatear_todas_las_generaciones_completo(registro_completo):
-    """
-    Concatena el registro completo paso a paso de todas y cada una de las 60 generaciones.
-    """
     partes = [formatear_resumen_general(registro_completo)]
     for g in registro_completo:
         partes.append(formatear_detalle_generacion(g))
@@ -972,14 +878,6 @@ METADATOS_GENES = [
 
 
 def formatear_reporte_puntos_de_corte_calibrados(parametros_calibrados, mejor_fitness=None, parametros_iniciales=None):
-    """
-    Construye el informe exhaustivo y pedagógico que demuestra:
-      1. Cuáles puntos de corte resultaron del mejor fitness tras el Algoritmo Genético.
-      2. A qué función de pertenencia corresponde cada uno (Baja, Media, Alta, etc.).
-      3. A qué variable de entrada pertenece (Nota Admisión, Aprobadas S1, Promedio S1).
-      4. El rol geométrico de cada vértice (inicio de rampa, meseta de certeza total, cúspide, fin de rampa).
-      5. La comparación cuantitativa antes (parámetros 'a ojo') vs después (calibrados con AG).
-    """
     if parametros_iniciales is None:
         parametros_iniciales = obtener_parametros_iniciales()
 
@@ -1025,7 +923,6 @@ def formatear_reporte_puntos_de_corte_calibrados(parametros_calibrados, mejor_fi
     p = parametros_calibrados
     p0 = parametros_iniciales
 
-    # VARIABLE 1
     lineas.append("\n• VARIABLE 1: NOTA DE ADMISIÓN (Dominio Global: 0.0 a 200.0 puntos):")
     lineas.append("  " + "-" * 105)
     baja = p['nota_adm_baja']
@@ -1045,7 +942,6 @@ def formatear_reporte_puntos_de_corte_calibrados(parametros_calibrados, mejor_fi
     lineas.append(f"     - [{alta[0]:.2f} a {alta[1]:.2f} pts] : Rampa ascendente donde μ sube de 0.0 a 1.0.")
     lineas.append(f"     - [{alta[1]:.2f} a 200.0 pts] : Meseta de certeza total (μ = 1.0). Estudiantes con alto desempeño garantizado.")
 
-    # VARIABLE 2
     lineas.append("\n• VARIABLE 2: MATERIAS APROBADAS 1er SEMESTRE (Dominio Global: 0 a 26 materias):")
     lineas.append("  " + "-" * 105)
     crit = p['aprobadas_critica']
@@ -1061,7 +957,6 @@ def formatear_reporte_puntos_de_corte_calibrados(parametros_calibrados, mejor_fi
     lineas.append(f"\n  3. Conjunto 'Completa' (Trapecio [a, b, c, d] = [{comp[0]:.2f}, {comp[1]:.2f}, {comp[2]:.1f}, {comp[3]:.1f}]):")
     lineas.append(f"     - A partir de {comp[1]:.2f} materias aprobadas, el estudiante es 100% clasificado en Avance Completo.")
 
-    # VARIABLE 3
     lineas.append("\n• VARIABLE 3: PROMEDIO DE NOTAS 1er SEMESTRE (Dominio Global: 0.0 a 20.0 puntos):")
     lineas.append("  " + "-" * 105)
     defn = p['nota_sem_deficiente']
@@ -1085,4 +980,3 @@ def formatear_reporte_puntos_de_corte_calibrados(parametros_calibrados, mejor_fi
     lineas.append("=" * 115 + "\n")
 
     return "\n".join(lineas)
-

@@ -1,17 +1,9 @@
-# =============================================================================
-# ARCHIVO: interfaz.py
-# Descripción: Interfaz Gráfica sencilla y didáctica (Tkinter)
-# Proyecto: Sistema Híbrido de Inteligencia Artificial para Deserción Estudiantil
-# Módulos utilizados: datos, difuso, prism, apriori, genetico, diagnostico
-# 100% Librería estándar de Python (sin instalar librerías externas)
-# =============================================================================
 
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox
 import random
 import os
 
-# Importamos los módulos propios del proyecto
 from datos import cargar_dataset, partir_dataset
 from difuso import (
     pertenencia_trapezoidal,
@@ -57,7 +49,6 @@ from diagnostico import (
     formatear_reporte_demostracion_motor_difuso
 )
 
-# Catálogo oficial de las 17 carreras universitarias presentes en el dataset data.csv
 DICCIONARIO_CARRERAS = {
     9991: "9991 - Gestión / Administración (Nocturno)",
     9500: "9500 - Enfermería",
@@ -86,7 +77,6 @@ class AplicacionDesercion:
         self.ventana.geometry("1080x750")
         self.ventana.minsize(920, 680)
 
-        # Variables de estado del sistema
         self.datos_completos = []
         self.datos_entrenamiento = []
         self.datos_prueba = []
@@ -99,21 +89,16 @@ class AplicacionDesercion:
         self.historial_fitness = []
         self.registro_generaciones = []
 
-        # Estilo visual sencillo y ordenado
         self.estilo = ttk.Style()
         self.estilo.theme_use('clam')
 
-        # Cargar los datos y reglas difusas iniciales
         self.cargar_datos_iniciales()
 
-        # Construir la barra superior maestra (botón de ejecución global)
         self.crear_barra_superior_maestra()
 
-        # Construir las pestañas de la interfaz
         self.crear_pestanas()
 
     def cargar_datos_iniciales(self):
-        """Carga el dataset CSV y realiza la partición 80% entrenamiento / 20% prueba."""
         ruta_csv = 'data.csv'
         if not os.path.exists(ruta_csv):
             ruta_csv = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data.csv')
@@ -121,19 +106,15 @@ class AplicacionDesercion:
         try:
             self.datos_completos = cargar_dataset(ruta_csv)
             self.datos_entrenamiento, self.datos_prueba = partir_dataset(self.datos_completos, 0.80)
-            # Inducción inicial de las 18 reglas cuantitativas
             self.reglas_difusas, _, self.reporte_difuso = inducir_reglas_difusas_con_prism(self.datos_entrenamiento, min_cobertura=15)
-            # Inducción inicial de las reglas causales cualitativas PRISM para el diagnóstico explicable
             self.reglas_prism, _ = ejecutar_prism(self.datos_entrenamiento, clase_objetivo='Dropout', semilla=42)
         except Exception as error:
             print("Aviso al cargar datos:", error)
 
     def crear_barra_superior_maestra(self):
-        """Barra superior con el botón maestro para ejecutar todo el sistema de una sola vez."""
         frame_maestro = tk.Frame(self.ventana, bg="#f3f3f3", relief=tk.RIDGE, bd=1, padx=10, pady=8)
         frame_maestro.pack(fill=tk.X, padx=10, pady=(10, 5))
 
-        # Botón maestro de un solo clic
         self.btn_ejecutar_todo = tk.Button(
             frame_maestro,
             text="▶ EJECUTAR TODO EL SISTEMA (Calcular Todas las Pestañas)",
@@ -150,7 +131,6 @@ class AplicacionDesercion:
         )
         self.btn_ejecutar_todo.pack(side=tk.LEFT, padx=(0, 15))
 
-        # Etiqueta de estado
         self.lbl_estado_global = tk.Label(
             frame_maestro,
             text="Estado: Listo. Presiona 'EJECUTAR TODO EL SISTEMA' para calcular todos los módulos a la vez.",
@@ -160,52 +140,34 @@ class AplicacionDesercion:
         )
         self.lbl_estado_global.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
-        # Barra de progreso
         self.barra_progreso = ttk.Progressbar(frame_maestro, orient=tk.HORIZONTAL, length=220, mode='determinate')
         self.barra_progreso.pack(side=tk.RIGHT, padx=5)
 
     def crear_pestanas(self):
-        """Crea el contenedor con las 5 pestañas principales del proyecto."""
         panel_pestanas = ttk.Notebook(self.ventana)
         panel_pestanas.pack(fill=tk.BOTH, expand=True, padx=10, pady=(5, 10))
 
-        # 1. Pestaña de Reglas (PRISM y Apriori)
         tab_reglas = ttk.Frame(panel_pestanas)
         panel_pestanas.add(tab_reglas, text=" 1. Reglas (PRISM y Apriori) ")
         self.construir_tab_reglas(tab_reglas)
 
-        # 2. Pestaña del Algoritmo Genético
         tab_genetico = ttk.Frame(panel_pestanas)
         panel_pestanas.add(tab_genetico, text=" 2. Algoritmo Genético ")
         self.construir_tab_genetico(tab_genetico)
 
-        # 3. Pestaña de Funciones de Pertenencia
         tab_funciones = ttk.Frame(panel_pestanas)
         panel_pestanas.add(tab_funciones, text=" 3. Funciones Difusas ")
         self.construir_tab_funciones(tab_funciones)
 
-        # 4. Pestaña de Diagnóstico Explicable
         tab_diagnostico = ttk.Frame(panel_pestanas)
         panel_pestanas.add(tab_diagnostico, text=" 4. Diagnóstico Explicable ")
         self.construir_tab_diagnostico(tab_diagnostico)
 
-        # 5. Pestaña de Matriz de Confusión y Resultados
         tab_resultados = ttk.Frame(panel_pestanas)
         panel_pestanas.add(tab_resultados, text=" 5. Resultados Finales ")
         self.construir_tab_resultados(tab_resultados)
 
-    # =========================================================================
-    # BOTÓN MAESTRO: EJECUTAR TODO EL SISTEMA DE UNA SOLA VEZ
-    # =========================================================================
     def accion_ejecutar_todo_el_sistema(self):
-        """
-        Ejecuta todo el pipeline completo sin necesidad de ir pestaña por pestaña:
-          1. Inducción de Reglas PRISM (cuantitativas y causales).
-          2. Minería de Reglas de Asociación Apriori.
-          3. Optimización evolutiva con el Algoritmo Genético.
-          4. Actualización de las Funciones de Pertenencia difusas.
-          5. Evaluación de la Matriz de Confusión y precarga del Diagnóstico Explicable.
-        """
         if not self.datos_entrenamiento:
             messagebox.showerror("Error", "No se encontraron datos en 'data.csv'.")
             return
@@ -215,29 +177,24 @@ class AplicacionDesercion:
         self.lbl_estado_global.config(text="Paso 1/5: Induciendo reglas difusas y causales PRISM...", fg="#005a9e")
         self.ventana.update()
 
-        # Paso 1: Reglas PRISM
         self.mostrar_reglas_difusas()
         self.accion_calcular_prism_causal(mostrar_aviso=False)
 
-        # Paso 2: Reglas Apriori
         self.barra_progreso['value'] = 25
         self.lbl_estado_global.config(text="Paso 2/5: Minando patrones y reglas de asociación con Apriori...", fg="#005a9e")
         self.ventana.update()
         self.accion_calcular_apriori(mostrar_aviso=False)
 
-        # Paso 3: Algoritmo Genético
         self.barra_progreso['value'] = 50
         self.lbl_estado_global.config(text="Paso 3/5: Calibrando funciones difusas con Algoritmo Genético...", fg="#005a9e")
         self.ventana.update()
         self.accion_ejecutar_genetico_completo(mostrar_alerta=False)
 
-        # Paso 4: Dibujar Funciones de Pertenencia
         self.barra_progreso['value'] = 80
         self.lbl_estado_global.config(text="Paso 4/5: Dibujando figuras de pertenencia y curvas de evolución...", fg="#005a9e")
         self.ventana.update()
         self.dibujar_funciones_pertenencia()
 
-        # Paso 5: Evaluar Matriz de Confusión y precargar diagnóstico
         self.barra_progreso['value'] = 95
         self.lbl_estado_global.config(text="Paso 5/5: Evaluando matriz de confusión y diagnóstico explicable...", fg="#005a9e")
         self.ventana.update()
@@ -259,9 +216,6 @@ class AplicacionDesercion:
             "Ahora puedes revisar libremente cualquier pestaña."
         )
 
-    # =========================================================================
-    # PESTAÑA 1: REGLAS (PRISM Y APRIORI)
-    # =========================================================================
     def construir_tab_reglas(self, parent):
         frame_superior = ttk.Frame(parent)
         frame_superior.pack(fill=tk.X, padx=10, pady=5)
@@ -345,14 +299,10 @@ class AplicacionDesercion:
         self.txt_reglas_apriori.delete('1.0', tk.END)
         self.txt_reglas_apriori.insert(tk.END, salida_texto_apriori)
 
-    # =========================================================================
-    # PESTAÑA 2: ALGORITMO GENÉTICO (VISUALIZACIÓN DETALLADA)
-    # =========================================================================
     def construir_tab_genetico(self, parent):
         frame_superior = ttk.Frame(parent)
         frame_superior.pack(fill=tk.X, padx=10, pady=5)
 
-        # Botón para ejecutar las 60 generaciones reales
         self.btn_ejecutar_genetico = ttk.Button(
             frame_superior,
             text="▶ 1. Ejecutar Algoritmo Genético (60 Generaciones Reales)",
@@ -360,7 +310,6 @@ class AplicacionDesercion:
         )
         self.btn_ejecutar_genetico.pack(side=tk.LEFT, padx=(0, 10))
 
-        # Selector de Generación paso a paso
         lbl_selector = ttk.Label(frame_superior, text="Inspeccionar Generación:", font=("Arial", 9, "bold"))
         lbl_selector.pack(side=tk.LEFT, padx=(5, 5))
 
@@ -370,7 +319,6 @@ class AplicacionDesercion:
         self.combo_generaciones.pack(side=tk.LEFT, padx=5)
         self.combo_generaciones.bind("<<ComboboxSelected>>", self.accion_cambiar_generacion_seleccionada)
 
-        # Botón para ver detalle de la generación seleccionada
         btn_ver_detalle = ttk.Button(
             frame_superior,
             text="🔍 Ver Detalle",
@@ -378,7 +326,6 @@ class AplicacionDesercion:
         )
         btn_ver_detalle.pack(side=tk.LEFT, padx=5)
 
-        # Botón para ver todas las 60 generaciones continuas
         btn_ver_todo = ttk.Button(
             frame_superior,
             text="📋 Ver Todas las 60 Generaciones (Continuo)",
@@ -386,7 +333,6 @@ class AplicacionDesercion:
         )
         btn_ver_todo.pack(side=tk.LEFT, padx=5)
 
-        # Botón para exportar el registro completo a archivo
         btn_guardar_reporte = ttk.Button(
             frame_superior,
             text="💾 Guardar Reporte (.txt)",
@@ -394,7 +340,6 @@ class AplicacionDesercion:
         )
         btn_guardar_reporte.pack(side=tk.LEFT, padx=5)
 
-        # Botón para ver los puntos de corte calibrados por el mejor fit (19 genes explicados)
         btn_ver_cortes = ttk.Button(
             frame_superior,
             text="🔬 Puntos de Corte Calibrados (19 Genes)",
@@ -402,11 +347,9 @@ class AplicacionDesercion:
         )
         btn_ver_cortes.pack(side=tk.LEFT, padx=5)
 
-        # Contenedor dividido en 2 columnas
         paned = ttk.PanedWindow(parent, orient=tk.HORIZONTAL)
         paned.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        # Panel izquierdo: ScrolledText para el detalle de padres, cruce, mutación y población
         frame_izq = ttk.Frame(paned)
         paned.add(frame_izq, weight=3)
 
@@ -420,7 +363,6 @@ class AplicacionDesercion:
         self.txt_genetico = scrolledtext.ScrolledText(frame_izq, font=("Courier", 9))
         self.txt_genetico.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        # Texto explicativo inicial
         self.txt_genetico.insert(
             tk.END,
             "====================================================================================================\n"
@@ -437,7 +379,6 @@ class AplicacionDesercion:
             "====================================================================================================\n"
         )
 
-        # Panel derecho: Gráfica de evolución y tarjetas de información
         frame_der = ttk.Frame(paned)
         paned.add(frame_der, weight=2)
 
@@ -448,7 +389,6 @@ class AplicacionDesercion:
         self.canvas_genetico.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         self.canvas_genetico.bind("<Configure>", lambda e: self.dibujar_grafica_fitness())
 
-        # Tarjeta de parámetros y resultados
         frame_metricas_ag = ttk.LabelFrame(frame_der, text=" Parámetros y Garantías Metodológicas del AG ", padding=10)
         frame_metricas_ag.pack(fill=tk.X, padx=5, pady=5)
 
@@ -475,7 +415,6 @@ class AplicacionDesercion:
         self.lbl_resultado_fitness.pack(anchor=tk.W)
 
     def accion_cambiar_generacion_seleccionada(self, event=None):
-        """Muestra el reporte detallado paso a paso de la generación elegida en el combobox."""
         if not self.registro_generaciones:
             messagebox.showinfo("Aviso", "Primero ejecuta el Algoritmo Genético para generar el registro de las 60 generaciones.")
             return
@@ -509,7 +448,6 @@ class AplicacionDesercion:
             print("Error al mostrar generación:", error)
 
     def accion_ver_todas_las_generaciones(self):
-        """Muestra de manera continua el desglose paso a paso de las 60 generaciones completas."""
         if not self.registro_generaciones:
             messagebox.showinfo("Aviso", "Primero ejecuta el Algoritmo Genético para generar el registro de las 60 generaciones.")
             return
@@ -524,7 +462,6 @@ class AplicacionDesercion:
         self.txt_genetico.see('1.0')
 
     def accion_guardar_reporte_genetico(self):
-        """Guarda en un archivo de texto el registro exhaustivo de todas las 60 generaciones."""
         if not self.registro_generaciones:
             messagebox.showinfo("Aviso", "No hay datos para guardar. Ejecuta primero el Algoritmo Genético.")
             return
@@ -539,7 +476,6 @@ class AplicacionDesercion:
             messagebox.showerror("Error al Guardar", f"No se pudo guardar el archivo: {err}")
 
     def accion_ver_puntos_de_corte_calibrados(self):
-        """Muestra el desglose detallado de los 19 puntos de corte calibrados por el mejor fit del AG."""
         mejor_fit = None
         if self.historial_fitness:
             mejor_fit = max(self.historial_fitness)
@@ -553,7 +489,6 @@ class AplicacionDesercion:
         self.txt_genetico.see('1.0')
 
     def accion_ejecutar_genetico_completo(self, mostrar_alerta=True):
-        """Ejecuta el Algoritmo Genético real (60 Generaciones) con progreso visual y registro completo."""
         self.txt_genetico.delete('1.0', tk.END)
         self.txt_genetico.insert(tk.END, "====================================================================================================\n")
         self.txt_genetico.insert(tk.END, "      INICIANDO EJECUCIÓN REAL DEL ALGORITMO GENÉTICO (60 GENERACIONES - 30 INDIVIDUOS)\n")
@@ -592,7 +527,6 @@ class AplicacionDesercion:
                 callback_progreso=callback_progreso_gui
             )
 
-            # Actualizar valores del Combobox
             opciones = ["00. Resumen General (Tabla Comparativa 60 Generaciones)"]
             for g in self.registro_generaciones:
                 num = g['generacion']
@@ -605,18 +539,15 @@ class AplicacionDesercion:
             self.combo_generaciones['values'] = opciones
             self.combo_generaciones.current(1)  # Seleccionar Generación 01 por defecto
 
-            # Actualizar etiquetas de resumen
             fit_ini = self.registro_generaciones[0].get('mejor_fitness_generacion', self.registro_generaciones[0].get('mejor_fitness_gen', 0.0)) * 100
             fit_fin = mejor_fitness * 100
             self.lbl_resultado_fitness.config(
                 text=f"\nFitness Inicial: {fit_ini:.2f}%  ->  Fitness Final: {fit_fin:.2f}%\nGanancia Evolutiva: +{fit_fin - fit_ini:.2f}%"
             )
 
-            # Redibujar gráfica de evolución y figuras difusas
             self.dibujar_grafica_fitness()
             self.dibujar_funciones_pertenencia()
 
-            # Mostrar inmediatamente la Generación 01 paso a paso
             self.accion_cambiar_generacion_seleccionada()
 
             if mostrar_alerta:
@@ -634,7 +565,6 @@ class AplicacionDesercion:
             messagebox.showerror("Error en AG", f"Ocurrió un error al ejecutar el Algoritmo Genético: {error}")
 
     def dibujar_grafica_fitness(self):
-        """Dibuja en el canvas la curva de evolución del mejor fitness."""
         self.canvas_genetico.delete("all")
         ancho = self.canvas_genetico.winfo_width()
         alto = self.canvas_genetico.winfo_height()
@@ -689,9 +619,6 @@ class AplicacionDesercion:
             font=("Arial", 9, "bold"), fill="#2b5797"
         )
 
-    # =========================================================================
-    # PESTAÑA 3: FUNCIONES DE PERTENENCIA (GRÁFICOS DIFUSOS)
-    # =========================================================================
     def construir_tab_funciones(self, parent):
         frame_superior = ttk.Frame(parent)
         frame_superior.pack(fill=tk.X, padx=10, pady=5)
@@ -713,7 +640,6 @@ class AplicacionDesercion:
         notebook_funciones = ttk.Notebook(parent)
         notebook_funciones.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        # Subpestaña 1: Gráficos de Funciones de Pertenencia
         frame_graficos = ttk.Frame(notebook_funciones)
         notebook_funciones.add(frame_graficos, text=" Curvas de Pertenencia Calibradas ")
 
@@ -735,7 +661,6 @@ class AplicacionDesercion:
         self.canvas_g3.pack(fill=tk.BOTH, expand=True, padx=5, pady=4)
         self.canvas_g3.bind("<Configure>", lambda e: self.dibujar_funciones_pertenencia())
 
-        # Subpestaña 2: Puntos de Corte Calibrados por el Algoritmo Genético (19 Genes)
         frame_cortes = ttk.Frame(notebook_funciones)
         notebook_funciones.add(frame_cortes, text=" Puntos de Corte Calibrados por el AG (19 Genes) ")
         self.txt_cortes_difusos = scrolledtext.ScrolledText(frame_cortes, font=("Courier", 10))
@@ -745,11 +670,9 @@ class AplicacionDesercion:
         self.ventana.after(100, self.dibujar_funciones_pertenencia)
 
     def cargar_guia_teorica_difusa(self):
-        """Redirige al diagnóstico explicable del estudiante para compatibilidad."""
         self.cargar_ejemplo_clase('Dropout')
 
     def mostrar_demostracion_caso_real(self, clase_objetivo='Dropout'):
-        """Carga y diagnostica el caso en Pestaña 4 para compatibilidad."""
         self.cargar_ejemplo_clase(clase_objetivo)
 
     def dibujar_conjunto_en_canvas(self, canvas, puntos, tipo, color, x_min, x_max, etiqueta):
@@ -813,10 +736,6 @@ class AplicacionDesercion:
         canvas.create_text(ancho // 2, alto - 10, text=titulo_eje, font=("Arial", 8, "italic"))
 
     def dibujar_variable_difusa_completa(self, canvas, x_min, x_max, titulo_eje, conjuntos):
-        """
-        Dibuja los conjuntos difusos de una variable con ejes, rejilla, líneas guía verticales,
-        puntos de corte explícitos con valores numéricos rotulados en el eje X y ficha técnica de genes.
-        """
         canvas.delete("all")
         ancho = canvas.winfo_width()
         alto = canvas.winfo_height()
@@ -838,33 +757,27 @@ class AplicacionDesercion:
         def escala_y(mu):
             return (alto - margen_abj) - mu * alto_util
 
-        # 1. Fondo blanco y rejilla cartesiana tenue
         canvas.create_rectangle(0, 0, ancho, alto, fill="#ffffff", outline="")
 
         canvas.create_line(margen_izq, escala_y(0.5), ancho - margen_der, escala_y(0.5), fill="#f1f5f9", dash=(2, 4))
         canvas.create_line(margen_izq, escala_y(1.0), ancho - margen_der, escala_y(1.0), fill="#e2e8f0", dash=(2, 4))
 
-        # Ejes principales
         canvas.create_line(margen_izq, escala_y(0.0), ancho - margen_der, escala_y(0.0), fill="#475569", width=1.5)
         canvas.create_line(margen_izq, margen_arr, margen_izq, escala_y(0.0), fill="#475569", width=1.5)
 
-        # Etiquetas del eje Y
         canvas.create_text(margen_izq - 12, escala_y(1.0), text="1.0", font=("Arial", 7), fill="#64748b")
         canvas.create_text(margen_izq - 12, escala_y(0.5), text="0.5", font=("Arial", 7), fill="#94a3b8")
         canvas.create_text(margen_izq - 12, escala_y(0.0), text="0.0", font=("Arial", 7), fill="#64748b")
         canvas.create_text(margen_izq - 32, margen_arr + alto_util // 2, text="μ", font=("Arial", 8, "bold"), fill="#1e293b")
 
-        # Título del eje X
         canvas.create_text(margen_izq + ancho_util // 2, alto - 8, text=titulo_eje, font=("Arial", 8, "italic"), fill="#334155")
 
-        # Extremos del eje X
         canvas.create_text(margen_izq, escala_y(0.0) + 11, text=str(x_min), font=("Arial", 8, "bold"), fill="#1e293b")
         canvas.create_text(ancho - margen_der, escala_y(0.0) + 11, text=str(x_max), font=("Arial", 8, "bold"), fill="#1e293b")
 
         puntos_corte_raw = []
         resumen_texto_partes = []
 
-        # 2. Dibujar cada conjunto difuso y recolectar puntos de corte
         for puntos, tipo, color, etiqueta in conjuntos:
             if tipo == 'trapecio':
                 a, b, c, d = puntos
@@ -905,14 +818,11 @@ class AplicacionDesercion:
                 fmt_vals = f"[{puntos[0]:.1f}, {puntos[1]:.1f}, {puntos[2]:.1f}]"
                 resumen_texto_partes.append(f"{etiqueta}: {fmt_vals}")
 
-            # Trazo de la curva difusa
             for i in range(len(coords) - 1):
                 canvas.create_line(coords[i][0], coords[i][1], coords[i+1][0], coords[i+1][1], fill=color, width=2.5)
 
-            # Rótulo de la etiqueta ("Baja", "Media", etc.)
             canvas.create_text(x_etiqueta, escala_y(1.0) - 10, text=etiqueta, font=("Arial", 9, "bold"), fill=color)
 
-            # Dibujar líneas verticales y puntos en los vértices del conjunto
             for pt_x_val, pt_y_mu in [(puntos[i], 1.0 if (tipo=='trapecio' and i in (1,2)) or (tipo=='triangulo' and i==1) else 0.0)
                                       for i in range(len(puntos))]:
                 if x_min + 0.001 < pt_x_val < x_max - 0.001:
@@ -923,7 +833,6 @@ class AplicacionDesercion:
                     if pt_y_mu == 1.0:
                         canvas.create_text(px, py - 9, text=f"{pt_x_val:.1f}", font=("Arial", 7, "bold"), fill=color)
 
-        # 3. Filtrar y rotular los puntos de corte únicos en el eje X
         validos = [p for p in puntos_corte_raw if (x_min + 0.001 < p[0] < x_max - 0.001)]
         validos.sort(key=lambda p: p[0])
 
@@ -943,7 +852,6 @@ class AplicacionDesercion:
             x_pix = escala_x(val)
             color_corte = corte['colores'][0] if len(corte['colores']) == 1 else "#334155"
 
-            # Escalonamiento vertical para evitar solapamientos entre números cercanos
             if abs(x_pix - prev_x_pix) < 36:
                 level = 1 if prev_level == 0 else 0
             else:
@@ -951,7 +859,6 @@ class AplicacionDesercion:
             prev_x_pix = x_pix
             prev_level = level
 
-            # Ticks en el eje X
             y_base = escala_y(0.0)
             if level == 0:
                 canvas.create_line(x_pix, y_base - 2, x_pix, y_base + 5, fill=color_corte, width=1.5)
@@ -963,12 +870,10 @@ class AplicacionDesercion:
             texto_corte = f"{int(val)}" if (val == int(val) and x_max <= 26) else f"{val:.1f}"
             canvas.create_text(x_pix, y_num, text=texto_corte, font=("Arial", 8, "bold"), fill=color_corte)
 
-        # 4. Ficha técnica de resumen de genes en la parte superior derecha
         texto_resumen = "  |  ".join(resumen_texto_partes)
         canvas.create_text(ancho - margen_der, 11, anchor=tk.E, text=texto_resumen, font=("Courier", 8, "bold"), fill="#475569")
 
     def dibujar_funciones_pertenencia(self):
-        """Dibuja las funciones difusas calibradas en cada uno de los 3 lienzos con sus puntos de corte explícitos."""
         p = self.parametros_difusos
 
         conjuntos_v1 = [
@@ -992,11 +897,9 @@ class AplicacionDesercion:
         ]
         self.dibujar_variable_difusa_completa(self.canvas_g3, 0, 20, "Promedio Semestral (1er Semestre)", conjuntos_v3)
 
-        # Refrescar reporte explicativo de puntos de corte (19 genes)
         self.actualizar_texto_puntos_de_corte()
 
     def actualizar_texto_puntos_de_corte(self):
-        """Actualiza la subpestaña de puntos de corte con el reporte explicativo de los 19 genes."""
         if not hasattr(self, 'txt_cortes_difusos'):
             return
         mejor_fit = None
@@ -1013,12 +916,6 @@ class AplicacionDesercion:
         self.txt_cortes_difusos.config(state=tk.DISABLED)
 
     def dibujar_proceso_difuso_4_paneles(self, canvas, nota_admision, materias_aprobadas, promedio_notas, parametros, fuerzas, riesgo_calculado, target_real=None, det=None):
-        """
-        Dibuja el flujo visual Mamdani completo en 4 paneles horizontales conectados por flechas:
-          [1. Input: Admisión] ➔ [2. Input: Aprobadas] ➔ [3. Input: Promedio] ➔ [4. Aggregation & Defuzzify]
-        Refleja exactamente el punto de corte (fuzzificación) de cada variable con líneas y flechas horizontales rosa,
-        el sombreado amarillo de activación, y en el panel 4 la masa agregada (cyan) con el Centroide (púrpura).
-        """
         ancho = canvas.winfo_width()
         alto = canvas.winfo_height()
         if ancho <= 1:
@@ -1033,7 +930,6 @@ class AplicacionDesercion:
         canvas.delete("all")
         canvas.create_rectangle(0, 0, ancho, alto, fill="#ffffff", outline="")
 
-        # Geometría global de los 4 paneles y conectores
         m_izq = 8
         m_der = 8
         gap = 20
@@ -1060,7 +956,6 @@ class AplicacionDesercion:
             bx1 = xp1 - pad_r
             return xp0, xp1, bx0, bx1
 
-        # Flechas rojas conectoras entre paneles (1 ➔ 2 ➔ 3 ➔ 4)
         for i in range(3):
             _, xp1, _, _ = get_panel_box(i)
             next_xp0, _, _, _ = get_panel_box(i + 1)
@@ -1070,7 +965,6 @@ class AplicacionDesercion:
                 fill="#d32f2f", width=2.5, arrow=tk.LAST, arrowshape=(6, 8, 3)
             )
 
-        # Helpers matemáticos de sombreado amarillo para regiones activadas
         def sombreado_trapecio(px_fn, py_fn, a, b, c, d, mu_corte, x_min_val, x_max_val):
             if mu_corte <= 0.005:
                 return
@@ -1125,9 +1019,6 @@ class AplicacionDesercion:
             c = max(0.0, min(1.0, mu_val))
             return y_bottom - c * h_box
 
-        # ---------------------------------------------------------------------
-        # PANEL 1: 1. Input: Admisión [0 a 200]
-        # ---------------------------------------------------------------------
         _, _, bx0_0, bx1_0 = get_panel_box(0)
         bw_0 = bx1_0 - bx0_0
         def px0(x):
@@ -1142,17 +1033,14 @@ class AplicacionDesercion:
         mu_adm_m = pertenencia_triangular(nota_admision, p_adm_m[0], p_adm_m[1], p_adm_m[2])
         mu_adm_a = pertenencia_trapezoidal(nota_admision, p_adm_a[0], p_adm_a[1], p_adm_a[2], p_adm_a[3])
 
-        # Sombreado amarillo en conjuntos activados
         sombreado_trapecio(px0, py_coord, p_adm_b[0], p_adm_b[1], p_adm_b[2], p_adm_b[3], mu_adm_b, 0, 200)
         sombreado_triangulo(px0, py_coord, p_adm_m[0], p_adm_m[1], p_adm_m[2], mu_adm_m, 0, 200)
         sombreado_trapecio(px0, py_coord, p_adm_a[0], p_adm_a[1], p_adm_a[2], p_adm_a[3], mu_adm_a, 0, 200)
 
-        # Curvas de pertenencia (Azul, Naranja, Verde)
         canvas.create_line(px0(0), py_coord(1.0), px0(p_adm_b[2]), py_coord(1.0), px0(p_adm_b[3]), py_coord(0.0), fill="#0d47a1", width=1.6)
         canvas.create_line(px0(p_adm_m[0]), py_coord(0.0), px0(p_adm_m[1]), py_coord(1.0), px0(p_adm_m[2]), py_coord(0.0), fill="#ff8f00", width=1.6)
         canvas.create_line(px0(p_adm_a[0]), py_coord(0.0), px0(p_adm_a[1]), py_coord(1.0), px0(200), py_coord(1.0), fill="#1b5e20", width=1.6)
 
-        # Marco del gráfico
         canvas.create_rectangle(bx0_0, y_top, bx1_0, y_bottom, outline="#000000", width=1.5)
         canvas.create_text((bx0_0 + bx1_0) / 2, y_top - 11, text="1. Input: Admisión", font=("Arial", 8, "bold"), fill="#000000")
         canvas.create_text(bx0_0 - 9, py_coord(0.0), text="0.0", font=("Arial", 7), fill="#000000")
@@ -1160,16 +1048,12 @@ class AplicacionDesercion:
         canvas.create_text(px0(0), y_bottom + 8, text="0", font=("Arial", 7), fill="#000000")
         canvas.create_text(px0(200), y_bottom + 8, text="200", font=("Arial", 7), fill="#000000")
 
-        # Entrada X1: línea punteada y caja
         x1_pix = px0(nota_admision)
         canvas.create_line(x1_pix, y_top, x1_pix, y_bottom, fill="#c2185b", dash=(2, 2), width=1.4)
         canvas.create_text(x1_pix, y_top - 6, text="X1", font=("Arial", 7, "bold"), fill="#c2185b")
         dibujar_flechas_mu(bx0_0, bx1_0, py_coord, [mu_adm_b, mu_adm_m, mu_adm_a])
         dibujar_caja_input(x1_pix, y_bottom, f"{nota_admision:.1f}")
 
-        # ---------------------------------------------------------------------
-        # PANEL 2: 2. Input: Aprobadas [0 a 20]
-        # ---------------------------------------------------------------------
         _, _, bx0_1, bx1_1 = get_panel_box(1)
         bw_1 = bx1_1 - bx0_1
         def px1(x):
@@ -1184,17 +1068,14 @@ class AplicacionDesercion:
         mu_apr_r = pertenencia_triangular(materias_aprobadas, p_apr_r[0], p_apr_r[1], p_apr_r[2])
         mu_apr_a = pertenencia_trapezoidal(materias_aprobadas, p_apr_a[0], p_apr_a[1], p_apr_a[2], p_apr_a[3])
 
-        # Sombreado amarillo
         sombreado_trapecio(px1, py_coord, p_apr_c[0], p_apr_c[1], p_apr_c[2], p_apr_c[3], mu_apr_c, 0, 20)
         sombreado_triangulo(px1, py_coord, p_apr_r[0], p_apr_r[1], p_apr_r[2], mu_apr_r, 0, 20)
         sombreado_trapecio(px1, py_coord, p_apr_a[0], p_apr_a[1], p_apr_a[2], p_apr_a[3], mu_apr_a, 0, 20)
 
-        # Curvas de pertenencia (Rojo, Naranja, Verde)
         canvas.create_line(px1(0), py_coord(1.0), px1(p_apr_c[2]), py_coord(1.0), px1(p_apr_c[3]), py_coord(0.0), fill="#c62828", width=1.6)
         canvas.create_line(px1(p_apr_r[0]), py_coord(0.0), px1(p_apr_r[1]), py_coord(1.0), px1(p_apr_r[2]), py_coord(0.0), fill="#ff8f00", width=1.6)
         canvas.create_line(px1(p_apr_a[0]), py_coord(0.0), px1(p_apr_a[1]), py_coord(1.0), px1(20), py_coord(1.0), fill="#1b5e20", width=1.6)
 
-        # Marco del gráfico
         canvas.create_rectangle(bx0_1, y_top, bx1_1, y_bottom, outline="#000000", width=1.5)
         canvas.create_text((bx0_1 + bx1_1) / 2, y_top - 11, text="2. Input: Aprobadas", font=("Arial", 8, "bold"), fill="#000000")
         canvas.create_text(bx0_1 - 9, py_coord(0.0), text="0.0", font=("Arial", 7), fill="#000000")
@@ -1202,7 +1083,6 @@ class AplicacionDesercion:
         canvas.create_text(px1(0), y_bottom + 8, text="0", font=("Arial", 7), fill="#000000")
         canvas.create_text(px1(20), y_bottom + 8, text="20", font=("Arial", 7), fill="#000000")
 
-        # Entrada X2: línea punteada y caja
         x2_pix = px1(materias_aprobadas)
         canvas.create_line(x2_pix, y_top, x2_pix, y_bottom, fill="#c2185b", dash=(2, 2), width=1.4)
         canvas.create_text(x2_pix, y_top - 6, text="X2", font=("Arial", 7, "bold"), fill="#c2185b")
@@ -1210,9 +1090,6 @@ class AplicacionDesercion:
         texto_aprobadas = f"{materias_aprobadas:.1f}" if materias_aprobadas != int(materias_aprobadas) else f"{int(materias_aprobadas)}"
         dibujar_caja_input(x2_pix, y_bottom, texto_aprobadas)
 
-        # ---------------------------------------------------------------------
-        # PANEL 3: 3. Input: Promedio [0 a 20]
-        # ---------------------------------------------------------------------
         _, _, bx0_2, bx1_2 = get_panel_box(2)
         bw_2 = bx1_2 - bx0_2
         def px2(x):
@@ -1227,17 +1104,14 @@ class AplicacionDesercion:
         mu_prom_a = pertenencia_triangular(promedio_notas, p_prom_a[0], p_prom_a[1], p_prom_a[2])
         mu_prom_s = pertenencia_trapezoidal(promedio_notas, p_prom_s[0], p_prom_s[1], p_prom_s[2], p_prom_s[3])
 
-        # Sombreado amarillo
         sombreado_trapecio(px2, py_coord, p_prom_d[0], p_prom_d[1], p_prom_d[2], p_prom_d[3], mu_prom_d, 0, 20)
         sombreado_triangulo(px2, py_coord, p_prom_a[0], p_prom_a[1], p_prom_a[2], mu_prom_a, 0, 20)
         sombreado_trapecio(px2, py_coord, p_prom_s[0], p_prom_s[1], p_prom_s[2], p_prom_s[3], mu_prom_s, 0, 20)
 
-        # Curvas de pertenencia (Rojo, Naranja, Verde)
         canvas.create_line(px2(0), py_coord(1.0), px2(p_prom_d[2]), py_coord(1.0), px2(p_prom_d[3]), py_coord(0.0), fill="#c62828", width=1.6)
         canvas.create_line(px2(p_prom_a[0]), py_coord(0.0), px2(p_prom_a[1]), py_coord(1.0), px2(p_prom_a[2]), py_coord(0.0), fill="#ff8f00", width=1.6)
         canvas.create_line(px2(p_prom_s[0]), py_coord(0.0), px2(p_prom_s[1]), py_coord(1.0), px2(20), py_coord(1.0), fill="#1b5e20", width=1.6)
 
-        # Marco del gráfico
         canvas.create_rectangle(bx0_2, y_top, bx1_2, y_bottom, outline="#000000", width=1.5)
         canvas.create_text((bx0_2 + bx1_2) / 2, y_top - 11, text="3. Input: Promedio", font=("Arial", 8, "bold"), fill="#000000")
         canvas.create_text(bx0_2 - 9, py_coord(0.0), text="0.0", font=("Arial", 7), fill="#000000")
@@ -1245,16 +1119,12 @@ class AplicacionDesercion:
         canvas.create_text(px2(0), y_bottom + 8, text="0", font=("Arial", 7), fill="#000000")
         canvas.create_text(px2(20), y_bottom + 8, text="20", font=("Arial", 7), fill="#000000")
 
-        # Entrada X3: línea punteada y caja
         x3_pix = px2(promedio_notas)
         canvas.create_line(x3_pix, y_top, x3_pix, y_bottom, fill="#c2185b", dash=(2, 2), width=1.4)
         canvas.create_text(x3_pix, y_top - 6, text="X3", font=("Arial", 7, "bold"), fill="#c2185b")
         dibujar_flechas_mu(bx0_2, bx1_2, py_coord, [mu_prom_d, mu_prom_a, mu_prom_s])
         dibujar_caja_input(x3_pix, y_bottom, f"{promedio_notas:.1f}")
 
-        # ---------------------------------------------------------------------
-        # PANEL 4: 4. Aggregation & Defuzzify [0.0 a 1.0]
-        # ---------------------------------------------------------------------
         _, _, bx0_3, bx1_3 = get_panel_box(3)
         bw_3 = bx1_3 - bx0_3
         def px3(y_val):
@@ -1265,12 +1135,10 @@ class AplicacionDesercion:
         p_rie_m = parametros.get('riesgo_medio', [0.3, 0.5, 0.7])
         p_rie_a = parametros.get('riesgo_alto', [0.55, 0.75, 1.0, 1.0])
 
-        # Curvas base tenues en gris
         canvas.create_line(px3(0.0), py_coord(1.0), px3(p_rie_b[2]), py_coord(1.0), px3(p_rie_b[3]), py_coord(0.0), fill="#bdbdbd", width=1.2)
         canvas.create_line(px3(p_rie_m[0]), py_coord(0.0), px3(p_rie_m[1]), py_coord(1.0), px3(p_rie_m[2]), py_coord(0.0), fill="#bdbdbd", width=1.2)
         canvas.create_line(px3(p_rie_a[0]), py_coord(0.0), px3(p_rie_a[1]), py_coord(1.0), px3(1.0), py_coord(1.0), fill="#bdbdbd", width=1.2)
 
-        # Polígono de Masa Agregada (Unión MAX de consecuentes truncados)
         alpha_b = fuerzas.get('Riesgo_Bajo', 0.0)
         alpha_m = fuerzas.get('Riesgo_Medio', 0.0)
         alpha_a = fuerzas.get('Riesgo_Alto', 0.0)
@@ -1293,10 +1161,8 @@ class AplicacionDesercion:
         poly_agg.extend([px3(1.0), py_coord(0.0)])
 
         if hay_masa:
-            # Color cyan / teal (#80deea) idéntico a la lámina del profesor
             canvas.create_polygon(poly_agg, fill="#80deea", outline="#00897b", width=1.6)
 
-        # Marco del gráfico
         canvas.create_rectangle(bx0_3, y_top, bx1_3, y_bottom, outline="#000000", width=1.5)
         canvas.create_text((bx0_3 + bx1_3) / 2, y_top - 11, text="4. Aggregation & Defuzzify", font=("Arial", 8, "bold"), fill="#000000")
         canvas.create_text(bx0_3 - 9, py_coord(0.0), text="0.0", font=("Arial", 7), fill="#000000")
@@ -1304,12 +1170,10 @@ class AplicacionDesercion:
         canvas.create_text(px3(0.0), y_bottom + 8, text="0", font=("Arial", 7), fill="#000000")
         canvas.create_text(px3(1.0), y_bottom + 8, text="1", font=("Arial", 7), fill="#000000")
 
-        # Flecha vertical púrpura del Centroide apuntando hacia abajo
         x_cog = px3(riesgo_calculado)
         canvas.create_line(x_cog, y_top - 2, x_cog, y_bottom, fill="#7b1fa2", width=2.5, arrow=tk.LAST, arrowshape=(6, 8, 3))
         canvas.create_text(x_cog, y_top - 8, text="Centroid", font=("Arial", 7, "bold"), fill="#7b1fa2")
 
-        # Caja púrpura inferior: Output = XX.X%
         txt_out = f"Output = {riesgo_calculado * 100:.1f}%"
         bw_out = 66
         x_box_out = max(bx0_3 + bw_out / 2 + 1, min(bx1_3 - bw_out / 2 - 1, x_cog))
@@ -1318,10 +1182,6 @@ class AplicacionDesercion:
         canvas.create_text(x_box_out, y_box_out, text=txt_out, font=("Arial", 6, "bold"), fill="#7b1fa2")
 
     def dibujar_masa_difusa_detallada_en_canvas(self, canvas, fuerzas, parametros, riesgo_calculado, target_real=None, titulo_extra="", detalles_calc=None):
-        """
-        Dibuja con precisión la función de masa difusa agregada panorámica (unión MAX de consecuentes truncados)
-        y la línea vertical del centroide (punto de equilibrio / centro de gravedad COG con balanza y fulcro físico).
-        """
         ancho = canvas.winfo_width()
         alto = canvas.winfo_height()
         if ancho <= 1:
@@ -1350,7 +1210,6 @@ class AplicacionDesercion:
         def escala_y(val_mu):
             return (alto - margen_abj) - val_mu * alto_util
 
-        # 1. Fondo blanco y cuadrícula tenue
         canvas.create_rectangle(0, 0, ancho, alto, fill="#ffffff", outline="")
 
         for mu_val in [0.25, 0.50, 0.75, 1.0]:
@@ -1364,19 +1223,16 @@ class AplicacionDesercion:
             canvas.create_line(x_pix, alto - margen_abj, x_pix, alto - margen_abj + 4, fill="#888888")
             canvas.create_text(x_pix, alto - margen_abj + 12, text=f"{y_val:.1f}", font=("Arial", 7), fill="#555555")
 
-        # Ejes coordenados principales
         canvas.create_line(margen_izq, escala_y(0.0), ancho - margen_der, escala_y(0.0), fill="#444444", width=1.5)
         canvas.create_line(margen_izq, margen_arr, margen_izq, escala_y(0.0), fill="#444444", width=1.5)
         canvas.create_text(margen_izq - 10, escala_y(0.0), text="0.00", font=("Arial", 7), fill="#777777")
         canvas.create_text(margen_izq - 32, margen_arr + alto_util // 2, text="μ(y)", font=("Arial", 8, "bold"), fill="#222222")
         canvas.create_text(margen_izq + ancho_util // 2, alto - 8, text="Universo de Discurso y ∈ [0.0, 1.0] (Riesgo Continuo de Deserción)", font=("Arial", 8, "italic"), fill="#333333")
 
-        # 2. Consecuentes difusos originales (Líneas tenues punteadas)
         p_bajo = parametros.get('riesgo_bajo', [0.0, 0.0, 0.25, 0.45])
         p_medio = parametros.get('riesgo_medio', [0.3, 0.5, 0.7])
         p_alto = parametros.get('riesgo_alto', [0.55, 0.75, 1.0, 1.0])
 
-        # Base Bajo
         pts_b = [
             (escala_x(p_bajo[0]), escala_y(0.0)),
             (escala_x(p_bajo[1]), escala_y(1.0)),
@@ -1386,7 +1242,6 @@ class AplicacionDesercion:
         canvas.create_line([c for pt in pts_b for c in pt], fill="#90caf9", dash=(3, 3), width=1)
         canvas.create_text(escala_x((p_bajo[1] + p_bajo[2]) / 2), escala_y(1.0) + 12, text="Bajo", font=("Arial", 8, "italic"), fill="#1976d2")
 
-        # Base Medio
         pts_m = [
             (escala_x(p_medio[0]), escala_y(0.0)),
             (escala_x(p_medio[1]), escala_y(1.0)),
@@ -1395,7 +1250,6 @@ class AplicacionDesercion:
         canvas.create_line([c for pt in pts_m for c in pt], fill="#ffe082", dash=(3, 3), width=1)
         canvas.create_text(escala_x(p_medio[1]), escala_y(1.0) + 12, text="Medio", font=("Arial", 8, "italic"), fill="#f57c00")
 
-        # Base Alto
         pts_a = [
             (escala_x(p_alto[0]), escala_y(0.0)),
             (escala_x(p_alto[1]), escala_y(1.0)),
@@ -1405,7 +1259,6 @@ class AplicacionDesercion:
         canvas.create_line([c for pt in pts_a for c in pt], fill="#ef9a9a", dash=(3, 3), width=1)
         canvas.create_text(escala_x((p_alto[1] + p_alto[2]) / 2), escala_y(1.0) + 12, text="Alto", font=("Arial", 8, "italic"), fill="#d32f2f")
 
-        # 3. Líneas de corte alfa (Fuerzas de activación de los consecuentes)
         alpha_b = fuerzas.get('Riesgo_Bajo', 0.0)
         alpha_m = fuerzas.get('Riesgo_Medio', 0.0)
         alpha_a = fuerzas.get('Riesgo_Alto', 0.0)
@@ -1422,7 +1275,6 @@ class AplicacionDesercion:
             canvas.create_line(escala_x(p_alto[0]), escala_y(alpha_a), escala_x(p_alto[3]), escala_y(alpha_a), fill="#c62828", dash=(4, 2), width=1.5)
             canvas.create_text(escala_x(p_alto[3]) - 28, escala_y(alpha_a) - 7, text=f"α_Alto={alpha_a:.2f}", font=("Arial", 7, "bold"), fill="#c62828")
 
-        # 4. Polígono de la Función de Masa Agregada (Unión MAX)
         num_pasos = 160
         poly_coords = [escala_x(0.0), escala_y(0.0)]
         hay_masa = False
@@ -1451,20 +1303,17 @@ class AplicacionDesercion:
                 font=("Arial", 9, "bold"), fill="#e65100"
             )
 
-        # 5. Umbral de Decisión canónico (0.50)
         x_umbral = escala_x(0.50)
         canvas.create_line(x_umbral, margen_arr, x_umbral, escala_y(0.0), fill="#616161", dash=(4, 3), width=1.5)
         canvas.create_text(x_umbral, margen_arr - 6, text="Umbral = 0.50", font=("Arial", 8, "bold"), fill="#424242")
         canvas.create_text(escala_x(0.22), margen_arr + 8, text="◄ NO DESERCIÓN (Bajo Riesgo)", font=("Arial", 7, "bold"), fill="#2e7d32")
         canvas.create_text(escala_x(0.78), margen_arr + 8, text="DESERCIÓN (Alto Riesgo) ►", font=("Arial", 7, "bold"), fill="#c62828")
 
-        # 6. Centroide y Punto de Apoyo Fulcro (Centro de Masa Defuzzificado)
         x_cog = escala_x(riesgo_calculado)
         color_cog = "#d32f2f" if riesgo_calculado >= 0.5 else "#107c41"
 
         canvas.create_line(x_cog, margen_arr + 14, x_cog, escala_y(0.0), fill=color_cog, width=2.5)
 
-        # Triángulo de fulcro (soporte físico de la balanza de masa)
         canvas.create_polygon(
             x_cog - 7, escala_y(0.0) + 11,
             x_cog + 7, escala_y(0.0) + 11,
@@ -1473,14 +1322,12 @@ class AplicacionDesercion:
         )
         canvas.create_text(x_cog, escala_y(0.0) + 20, text=f"▲ Fulcro y*={riesgo_calculado:.4f}", font=("Arial", 8, "bold"), fill=color_cog)
 
-        # Etiqueta flotante superior sobre el centroide
         tag_diag = "DROPOUT" if riesgo_calculado >= 0.5 else "NO DROPOUT"
         tag_texto = f" y* = {riesgo_calculado:.4f} [{tag_diag}] "
         x_tag = max(margen_izq + 65, min(ancho - margen_der - 65, x_cog))
         canvas.create_rectangle(x_tag - 65, margen_arr - 2, x_tag + 65, margen_arr + 14, fill=color_cog, outline="#ffffff")
         canvas.create_text(x_tag, margen_arr + 6, text=tag_texto, font=("Arial", 8, "bold"), fill="#ffffff")
 
-        # 7. Encabezado de la Gráfica y Métricas Matemáticas
         titulo = "FUNCIÓN DE MASA DIFUSA AGREGADA Y CENTROIDE (Paso 3 y 4 Mamdani)"
         if target_real:
             titulo += f" | Estudiante Dataset: '{target_real}'"
@@ -1495,9 +1342,6 @@ class AplicacionDesercion:
             canvas.create_text(ancho - margen_der, 10, anchor=tk.E, text=info_masa, font=("Courier", 8, "bold"), fill="#37474f")
 
     def dibujar_masa_difusa_en_canvas(self, canvas, fuerzas, parametros, riesgo_calculado, target_real=None, titulo_extra="", detalles_calc=None, nota_admision=None, materias_aprobadas=None, promedio_notas=None):
-        """
-        Dibuja la gráfica en el canvas llamando al modo activo (detallada o 4 paneles).
-        """
         modo = getattr(self, 'modo_vista_grafico', None)
         modo_val = modo.get() if modo else "4_paneles"
         if modo_val == "detallada":
@@ -1519,7 +1363,6 @@ class AplicacionDesercion:
             )
 
     def redibujar_masa_diagnostico(self):
-        """Redibuja el gráfico del estudiante según el modo seleccionado (4 paneles o masa detallada)."""
         if hasattr(self, 'ultimo_caso_diagnostico') and hasattr(self, 'canvas_masa_diagnostico'):
             caso_actual = self.ultimo_caso_diagnostico
             modo = getattr(self, 'modo_vista_grafico', None)
@@ -1547,9 +1390,6 @@ class AplicacionDesercion:
                     det=caso_actual.get('det')
                 )
 
-    # =========================================================================
-    # PESTAÑA 4: DIAGNÓSTICO EXPLICABLE (XAI)
-    # =========================================================================
     def construir_tab_diagnostico(self, parent):
         frame_izq = ttk.LabelFrame(parent, text="Datos del Estudiante a Evaluar")
         frame_izq.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
@@ -1603,14 +1443,12 @@ class AplicacionDesercion:
         frame_der = ttk.LabelFrame(parent, text="Informe Explicable del Sistema Híbrido (XAI)")
         frame_der.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        # Gráfico del Proceso Completo Mamdani (Selector: 4 Paneles / Masa Detallada)
         frame_grafico_diag = ttk.LabelFrame(
             frame_der,
             text="Visualización Gráfica de Inferencia Mamdani"
         )
         frame_grafico_diag.pack(fill=tk.X, padx=5, pady=3)
 
-        # Barra selectora de vista gráfica
         frame_selector_vista = ttk.Frame(frame_grafico_diag)
         frame_selector_vista.pack(fill=tk.X, padx=6, pady=(1, 3))
 
@@ -1640,7 +1478,6 @@ class AplicacionDesercion:
         self.canvas_masa_diagnostico.pack(fill=tk.BOTH, expand=False, padx=4, pady=2)
         self.canvas_masa_diagnostico.bind("<Configure>", lambda e: self.redibujar_masa_diagnostico())
 
-        # Banner de Síntesis del Sistema Híbrido (Diferenciación Visual Inmediata)
         self.frame_resumen_hibrido = tk.Frame(frame_der, bg="#f1f3f5", relief=tk.GROOVE, bd=1, padx=6, pady=4)
         self.frame_resumen_hibrido.pack(fill=tk.X, padx=5, pady=(3, 3))
 
@@ -1682,7 +1519,6 @@ class AplicacionDesercion:
                 materias_aprobadas_val = float(estudiante.get('Curricular units 1st sem (approved)', 0))
                 promedio_notas_val = float(estudiante.get('Curricular units 1st sem (grade)', 0))
 
-                # Para Dropout, seleccionar caso prototípico que ilustra convergencia PRISM (Course=9991, Tuition=0)
                 if clase_objetivo == 'Dropout':
                     if estudiante.get('Course') == 9991 and estudiante.get('Tuition fees up to date') == 0:
                         caso_seleccionado = estudiante
@@ -1692,7 +1528,6 @@ class AplicacionDesercion:
                             caso_seleccionado = estudiante
                     continue
 
-                # Para Graduate, seleccionar caso prototípico de alto rendimiento
                 if clase_objetivo == 'Graduate':
                     if materias_aprobadas_val >= 5 and promedio_notas_val >= 12.0:
                         caso_seleccionado = estudiante
@@ -1754,12 +1589,10 @@ class AplicacionDesercion:
             'Debtor': 1 if pagos_val == 0 else 0
         }
 
-        # PILAR 1: Inferencia Difusa Mamdani Cuantitativa (Notas y Asignaturas)
         riesgo, det = evaluar_motor_difuso(
             nota_admision, materias_aprobadas, promedio_notas, self.parametros_difusos, 100, reglas=self.reglas_difusas
         )
 
-        # PILAR 2: Reglas Causales PRISM Dinámicas (Supervisadas desde el Dataset)
         if not self.reglas_prism and self.datos_entrenamiento:
             self.reglas_prism, _ = ejecutar_prism(self.datos_entrenamiento, clase_objetivo='Dropout', semilla=42)
 
@@ -1777,7 +1610,6 @@ class AplicacionDesercion:
 
         alerta_prism = len(reglas_prism_disparadas) > 0
 
-        # PILAR 3: Minería de Asociación Apriori
         reglas_apriori_disparadas = []
         if self.reglas_apriori:
             items_estudiante = extraer_items_estudiante_apriori(estudiante_eval, incluir_target=False)
@@ -1785,11 +1617,9 @@ class AplicacionDesercion:
                 if regla['antecedente'].issubset(items_estudiante):
                     reglas_apriori_disparadas.append(regla)
 
-        # Nombre legible de la carrera seleccionada
         nombre_carrera = DICCIONARIO_CARRERAS.get(carrera_codigo, f"Carrera {carrera_codigo}")
         estado_pagos_txt = "Al Día (Sin Cuotas Vencidas)" if pagos_val == 1 else "Atrasado (Cuotas Pendientes de Matrícula)"
 
-        # Actualizar Tarjetas Visuales de Síntesis Híbrida en Tiempo Real
         if hasattr(self, 'lbl_tarjeta_difuso'):
             color_difuso = "#d13438" if riesgo >= 0.5 else "#107c41"
             estado_dif_txt = "Alto Riesgo Académico" if riesgo >= 0.5 else "Bajo Riesgo Académico"
@@ -1842,13 +1672,11 @@ class AplicacionDesercion:
         else:
             self.txt_diagnostico.insert(tk.END, "\n")
 
-        # DESARROLLO EXPLICABLE DE LOS 4 PASOS CANÓNICOS DE LA LÓGICA DIFUSA MAMDANI
         texto_4_pasos = describir_los_4_pasos_difusos(
             nota_admision, materias_aprobadas, promedio_notas, self.parametros_difusos, detalle_motor=det, reglas=self.reglas_difusas
         )
         self.txt_diagnostico.insert(tk.END, texto_4_pasos + "\n\n")
 
-        # PILAR 2: REGLAS CAUSALES PRISM
         self.txt_diagnostico.insert(tk.END, "[PILAR 2: EVALUACIÓN DE REGLAS CAUSALES PRISM (EVALUACIÓN DINÁMICA DE CONOCIMIENTO)]\n")
         self.txt_diagnostico.insert(tk.END, "-" * 95 + "\n")
         if alerta_prism:
@@ -1872,7 +1700,6 @@ class AplicacionDesercion:
             self.txt_diagnostico.insert(tk.END, f"  El perfil del estudiante ({nombre_carrera}, Matrícula: {estado_pagos_txt}) no coincide con ninguna\n")
             self.txt_diagnostico.insert(tk.END, "  de las reglas causales determinísticas de abandono obligatorio inducidas por el algoritmo PRISM.\n\n")
 
-        # PILAR 3: MINERÍA DE ASOCIACIÓN APRIORI
         self.txt_diagnostico.insert(tk.END, "[PILAR 3: MINERÍA DE ASOCIACIÓN APRIORI (PATRONES FRECUENTES DE ASOCIACIÓN)]\n")
         self.txt_diagnostico.insert(tk.END, "-" * 95 + "\n")
         if reglas_apriori_disparadas:
@@ -1888,7 +1715,6 @@ class AplicacionDesercion:
             self.txt_diagnostico.insert(tk.END, "  No se registran patrones atípicos de alta confianza en Apriori para este perfil individual.\n")
             self.txt_diagnostico.insert(tk.END, "  (Nota: Para enriquecer los patrones globales, ejecuta 'Minería Apriori' en la Pestaña 1).\n\n")
 
-        # SÍNTESIS Y VEREDICTO FINAL DEL SISTEMA HÍBRIDO
         self.txt_diagnostico.insert(tk.END, "[SÍNTESIS DIAGNÓSTICA Y VEREDICTO FINAL DEL SISTEMA HÍBRIDO (XAI)]\n")
         self.txt_diagnostico.insert(tk.END, "=" * 95 + "\n")
         if riesgo >= 0.5 or alerta_prism:
@@ -1915,7 +1741,6 @@ class AplicacionDesercion:
             self.txt_diagnostico.insert(tk.END, f"  Verificación:      {marca} (Realidad: {target_real})\n")
         self.txt_diagnostico.insert(tk.END, "=" * 95 + "\n")
 
-        # Guardar estado para redibujo y renderizar en canvas de diagnóstico (4 paneles completos)
         self.ultimo_caso_diagnostico = {
             'nota_admision': nota_admision,
             'materias_aprobadas': materias_aprobadas,
@@ -1931,9 +1756,6 @@ class AplicacionDesercion:
         if hasattr(self, 'canvas_masa_diagnostico'):
             self.redibujar_masa_diagnostico()
 
-    # =========================================================================
-    # PESTAÑA 5: MATRIZ DE CONFUSIÓN Y RESULTADOS
-    # =========================================================================
     def construir_tab_resultados(self, parent):
         frame_superior = ttk.Frame(parent)
         frame_superior.pack(fill=tk.X, padx=15, pady=8)
@@ -1952,7 +1774,6 @@ class AplicacionDesercion:
         )
         btn_recalcular.pack(side=tk.RIGHT, padx=5)
 
-        # Tarjetas de métricas principales
         frame_tarjetas = ttk.Frame(parent)
         frame_tarjetas.pack(fill=tk.X, padx=15, pady=5)
 
@@ -1981,17 +1802,14 @@ class AplicacionDesercion:
         self.lbl_prism = tk.Label(caja_prism, text="+4 Desertores", font=("Arial", 16, "bold"), fg="#d83b01")
         self.lbl_prism.pack(pady=6)
 
-        # Notebook con dos pestañas de resultados exhaustivos
         notebook_res = ttk.Notebook(parent)
         notebook_res.pack(fill=tk.BOTH, expand=True, padx=15, pady=8)
 
-        # Subpestaña 1: Demostración Motor Difuso en Prueba (885 Casos)
         frame_sub_difuso = ttk.Frame(notebook_res)
         notebook_res.add(frame_sub_difuso, text=" Demostración Motor Difuso en Prueba (885 Casos No Vistos) ")
         self.txt_resultado_difuso = scrolledtext.ScrolledText(frame_sub_difuso, font=("Courier", 10))
         self.txt_resultado_difuso.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
 
-        # Subpestaña 2: Matriz Global Sistema Híbrido
         frame_sub_hibrido = ttk.Frame(notebook_res)
         notebook_res.add(frame_sub_hibrido, text=" Matriz Global Sistema Híbrido (Difuso + PRISM + Apriori) ")
         self.txt_matriz = scrolledtext.ScrolledText(frame_sub_hibrido, font=("Courier", 10))
@@ -2000,13 +1818,11 @@ class AplicacionDesercion:
         self.actualizar_resultados_finales()
 
     def actualizar_resultados_finales(self):
-        """Calcula dinámicamente las métricas de prueba del Motor Difuso y del Sistema Híbrido."""
         if not self.datos_prueba:
             return
 
         es_calibrado = len(self.historial_fitness) > 1
 
-        # 1. EVALUACIÓN EXCLUSIVA DEL MOTOR DIFUSO EN PRUEBA (885 DATOS NO VISTOS)
         res_difuso = evaluar_rendimiento_motor_difuso(
             self.datos_prueba, self.parametros_difusos, self.reglas_difusas
         )
@@ -2018,7 +1834,6 @@ class AplicacionDesercion:
             self.txt_resultado_difuso.insert(tk.END, reporte_difuso)
             self.txt_resultado_difuso.config(state=tk.DISABLED)
 
-        # 2. EVALUACIÓN DEL SISTEMA HÍBRIDO (DIFUSO OR PRISM)
         verdaderos_positivos_hibrido = 0
         falsos_positivos_hibrido = 0
         verdaderos_negativos_hibrido = 0
@@ -2070,7 +1885,6 @@ class AplicacionDesercion:
         f1_h = 2 * (prec_h * rec_h) / (prec_h + rec_h) if (prec_h + rec_h) > 0 else 0
         rescatados = verdaderos_positivos_hibrido - verdaderos_positivos_difuso
 
-        # Actualizar etiquetas de tarjetas
         if hasattr(self, 'lbl_acc_difuso'):
             self.lbl_acc_difuso.config(text=f"{res_difuso['accuracy']*100:.2f}%")
         if hasattr(self, 'lbl_acc'):
@@ -2083,7 +1897,6 @@ class AplicacionDesercion:
             signo = "+" if rescatados >= 0 else ""
             self.lbl_prism.config(text=f"{signo}{rescatados} Desertores")
 
-        # Actualizar cuadro de texto de la matriz híbrida
         if hasattr(self, 'txt_matriz'):
             self.txt_matriz.config(state=tk.NORMAL)
             self.txt_matriz.delete('1.0', tk.END)

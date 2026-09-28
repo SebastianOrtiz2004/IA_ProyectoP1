@@ -1,21 +1,11 @@
-# =============================================================================
-# ARCHIVO: prism.py
-# Descripción: Algoritmo PRISM de Aprendizaje Inductivo de Reglas (Académico)
-# Métodos:
-#   1. PRISM Cuantitativo (Difuso): Evalúa las 27 combinaciones candidatas desde
-#      el inicio y poda las reglas con soporte insuficiente o nulo.
-#   2. PRISM Cualitativo (Causal): Construcción iterativa paso a paso con tabla
-#      de candidatas y regla compuesta final de múltiples variables.
-# =============================================================================
-
 import sys
 import random
+
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
-# Diccionario de traducción y correspondencia Inglés -> Español para atributos
 DICCIONARIO_TRADUCCION_ATRIBUTOS = {
     'Marital status': 'Estado_Civil',
     'Application mode': 'Modo_Admision',
@@ -37,24 +27,14 @@ DICCIONARIO_TRADUCCION_ATRIBUTOS = {
     'International': 'Estudiante_Extranjero',
 }
 
-# Lista ordenada de los 18 atributos discretos analizados
 ATRIBUTOS_DISCRETOS_PRISM = list(DICCIONARIO_TRADUCCION_ATRIBUTOS.keys())
 
 
 def traducir_atributo(nombre_ingles):
-    """Devuelve el nombre en español del atributo."""
     return DICCIONARIO_TRADUCCION_ATRIBUTOS.get(nombre_ingles, nombre_ingles)
 
 
 def calcular_metricas_prism(datos_completos, lista_condiciones, clase_objetivo='Dropout'):
-    """
-    Calcula métricas evaluando siempre sobre los N datos completos.
-      |A|     = casos que cumplen el antecedente
-      |A & B| = casos que cumplen el antecedente Y son de la clase objetivo
-      Confianza = |A & B| / |A|
-      Soporte   = |A & B| / N
-      Lift      = Confianza / P(B)
-    """
     total_estudiantes = len(datos_completos)
     estudiantes_con_antecedente = 0
     estudiantes_con_interseccion = 0
@@ -86,7 +66,6 @@ def calcular_metricas_prism(datos_completos, lista_condiciones, clase_objetivo='
 
 
 def generar_encabezado_prism(ruta_archivo, N, conteo_B, prob_B):
-    """Genera el encabezado formal académico del informe PRISM."""
     lineas = []
     lineas.append("=" * 95)
     lineas.append("           INFORME DE EJECUCIÓN: ALGORITMO PRISM ADAPTADO (ACADÉMICO)")
@@ -107,13 +86,6 @@ def generar_encabezado_prism(ruta_archivo, N, conteo_B, prob_B):
 
 
 def seleccionar_regla_ganadora_prism(candidatas, semilla=42):
-    """
-    Selecciona la regla ganadora entre las candidatas según el criterio académico:
-      1° Máxima Confianza (redondeada a 8 decimales)
-      2° Máxima Cobertura (|A & B|) / Soporte
-      3° Máximo Lift (redondeado a 8 decimales)
-    En caso de empate técnico perfecto en las 3 métricas, aplica desempate aleatorio con semilla.
-    """
     def funcion_ordenamiento(candidata):
         return (round(candidata['confianza'], 8), candidata['cobertura'], round(candidata['lift'], 8))
 
@@ -133,16 +105,6 @@ def seleccionar_regla_ganadora_prism(candidatas, semilla=42):
 
 
 def ejecutar_prism(datos_entrenamiento, clase_objetivo='Dropout', semilla=42, min_cobertura=10, **kwargs):
-    """
-    Ejecuta el Algoritmo PRISM en su formulación algorítmica canónica:
-    Construye UNA SOLA REGLA COMPUESTA GANADORA a través de iteraciones sucesivas
-    (1 variable añadida por iteración), evaluando todas las candidatas y seleccionando
-    el mejor par atributo-valor con [*].
-    Condición de parada del MIENTRAS:
-      MIENTRAS (regla cubre algún ejemplo negativo AND Atributos ≠ ∅)
-      En el momento en que la regla alcanza Confianza = 100.0% (0 ejemplos negativos cubiertos),
-      la condición del MIENTRAS se evalúa como FALSO y el algoritmo concluye devolviendo la regla.
-    """
     N = len(datos_entrenamiento)
     conteo_B = sum(1 for estudiante in datos_entrenamiento if estudiante.get('Target') == clase_objetivo)
     prob_B = conteo_B / N if N > 0 else 0.0
@@ -171,7 +133,6 @@ def ejecutar_prism(datos_entrenamiento, clase_objetivo='Dropout', semilla=42, mi
                     datos_entrenamiento, condiciones_prueba, clase_objetivo
                 )
 
-                # Umbral mínimo de casos para evitar reglas espurias de 1 caso
                 umbral = min_cobertura if iteracion == 1 else max(5, min_cobertura // 2)
                 if cobertura_interseccion < umbral:
                     continue
@@ -201,7 +162,6 @@ def ejecutar_prism(datos_entrenamiento, clase_objetivo='Dropout', semilla=42, mi
             candidatas, semilla=semilla + iteracion
         )
 
-        # Ancho dinámico para la tabla de candidatas
         max_longitud = max(len(candidata['texto_regla']) for candidata in candidatas_ordenadas)
         ancho_col = max(55, min(95, max_longitud + 2))
         ancho_tabla = ancho_col + 65
@@ -234,13 +194,10 @@ def ejecutar_prism(datos_entrenamiento, clase_objetivo='Dropout', semilla=42, mi
         bloque_iteracion = iter_encabezado + iter_cuerpo + iter_pie + anuncio
         salida_texto.append(bloque_iteracion)
 
-        # Incorporar la condición ganadora al antecedente
         condiciones_actuales.append((regla_ganadora['atributo'], regla_ganadora['valor']))
         columnas_restantes.remove(regla_ganadora['atributo'])
         historial_iteraciones.append(regla_ganadora)
 
-        # CONDICIÓN DE PARADA OFICIAL DE PRISM:
-        # MIENTRAS (regla cubre algún ejemplo negativo AND Atributos ≠ ∅) => FALSO
         if regla_ganadora['confianza'] >= 1.0:
             msg_parada = (
                 f"\n  [!] CONDICIÓN DE PARADA OFICIAL DE PRISM:\n"
@@ -253,7 +210,6 @@ def ejecutar_prism(datos_entrenamiento, clase_objetivo='Dropout', semilla=42, mi
     if not condiciones_actuales:
         return [], "".join(salida_texto)
 
-    # RESUMEN FINAL DE LA REGLA COMPLETA INDUCIDA (CON LAS 18 VARIABLES)
     cobertura_final, casos_antecedente_final, confianza_final, soporte_final, lift_final = calcular_metricas_prism(
         datos_entrenamiento, condiciones_actuales, clase_objetivo
     )
@@ -287,8 +243,6 @@ def ejecutar_prism(datos_entrenamiento, clase_objetivo='Dropout', semilla=42, mi
     }
 
     lista_reglas_finales = [regla_dict]
-    # Si la regla compuesta acumuló múltiples condiciones, conservar también la regla
-    # general de la primera iteración si posee alta confianza (>= 80%) y amplia cobertura
     for paso_iteracion in historial_iteraciones[:-1]:
         if paso_iteracion['confianza'] >= 0.80 and paso_iteracion['cobertura'] >= 15:
             conds_paso = paso_iteracion['condiciones']
@@ -309,12 +263,6 @@ def ejecutar_prism(datos_entrenamiento, clase_objetivo='Dropout', semilla=42, mi
 
 
 def inducir_reglas_difusas_con_prism(datos_entrenamiento, min_cobertura=15, imprimir=False):
-    """
-    PRISM DIFUSO (CUANTITATIVO):
-    Evalúa las 27 combinaciones teóricas completas (3 x 3 x 3) desde el inicio.
-    Genera tabla de todas las candidatas probadas, indicando cuáles fueron
-    APROBADAS (consecuente asignado) y cuáles fueron PODADAS con su motivo.
-    """
     lineas_difuso = []
     encabezado = "\n" + "=" * 95 + "\n"
     encabezado += "  PASO 2A: PRISM DIFUSO - INDUCCIÓN DE REGLAS MAMDANI DESDE EL 100% DE DATOS\n"
@@ -347,7 +295,6 @@ def inducir_reglas_difusas_con_prism(datos_entrenamiento, min_cobertura=15, impr
         if estado_estudiante == 'Dropout':
             conteos_combinaciones[clave_combinacion]['casos_desercion'] += 1
 
-    # Agregar combinaciones inexistentes (0 casos)
     etiquetas_admision = ['X1_Baja', 'X1_Media', 'X1_Alta']
     etiquetas_aprobadas = ['X2_Critica', 'X2_Regular', 'X2_Completa']
     etiquetas_promedio = ['X3_Deficiente', 'X3_Aceptable', 'X3_Sobresaliente']
@@ -358,7 +305,6 @@ def inducir_reglas_difusas_con_prism(datos_entrenamiento, min_cobertura=15, impr
                 if combinacion_tupla not in conteos_combinaciones:
                     conteos_combinaciones[combinacion_tupla] = {'total_casos': 0, 'casos_desercion': 0}
 
-    # Ordenar las 27 combinaciones por frecuencia
     def criterio_total(elemento_combinacion):
         return elemento_combinacion[1]['total_casos']
 

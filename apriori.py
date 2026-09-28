@@ -1,13 +1,3 @@
-# =============================================================================
-# ARCHIVO: apriori.py
-# Descripción: Algoritmo Apriori de Reglas de Asociación (Estructurado por Fases)
-# Fases metodológicas:
-#   - FASE 0: Cálculo de la Cobertura Mínima
-#   - FASE 1: Generación y Poda de Ítem-Sets Frecuentes (k = 1, 2, 3) con Tablas
-#   - FASE 2: Extracción y Evaluación de Reglas de Asociación (A -> B) con Tablas
-#   - RESUMEN FINAL: Reglas Perfectas (1.0) y Reglas de Alta Confianza
-# 100% Python estándar (sin librerías externas)
-# =============================================================================
 import sys
 import math
 
@@ -17,12 +7,8 @@ if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 def extraer_items_estudiante_apriori(estudiante, incluir_target=False):
-    """
-    Convierte el perfil de un estudiante a un conjunto de ítems en español 'Atributo=Valor'.
-    """
     items = set()
 
-    # Variables institucionales binarias
     columnas_binarias = [
         ('Displaced', 'Estudiante_Foraneo'),
         ('Educational special needs', 'Necesidades_Especiales'),
@@ -40,7 +26,6 @@ def extraer_items_estudiante_apriori(estudiante, incluir_target=False):
             except (ValueError, TypeError):
                 pass
 
-    # Género
     val_gen = estudiante.get('Gender')
     if val_gen is not None:
         try:
@@ -48,7 +33,6 @@ def extraer_items_estudiante_apriori(estudiante, incluir_target=False):
         except (ValueError, TypeError):
             pass
 
-    # Horario de estudio
     val_hor = estudiante.get('Daytime/evening attendance')
     if val_hor is not None:
         try:
@@ -56,14 +40,12 @@ def extraer_items_estudiante_apriori(estudiante, incluir_target=False):
         except (ValueError, TypeError):
             pass
 
-    # Target (opcional, para minería global)
     if incluir_target:
         valor_objetivo = estudiante.get('Target', '')
         if valor_objetivo:
             desercion_esp = "Si" if valor_objetivo == 'Dropout' else "No"
             items.add(f"Desercion={desercion_esp}")
 
-    # Nota de admisión discretizada
     try:
         nota_admision = float(estudiante.get('Admission grade', 0))
         if nota_admision < 115:
@@ -75,7 +57,6 @@ def extraer_items_estudiante_apriori(estudiante, incluir_target=False):
     except (ValueError, TypeError):
         pass
 
-    # Materias aprobadas en 1er semestre
     try:
         aprobadas_primer_semestre = float(estudiante.get('Curricular units 1st sem (approved)', 0))
         if aprobadas_primer_semestre == 0:
@@ -89,7 +70,6 @@ def extraer_items_estudiante_apriori(estudiante, incluir_target=False):
     except (ValueError, TypeError):
         pass
 
-    # Promedio de notas en 1er semestre
     try:
         promedio_primer_semestre = float(estudiante.get('Curricular units 1st sem (grade)', 0))
         if promedio_primer_semestre < 10.0:
@@ -101,7 +81,6 @@ def extraer_items_estudiante_apriori(estudiante, incluir_target=False):
     except (ValueError, TypeError):
         pass
 
-    # Materias aprobadas en 2do semestre
     try:
         aprobadas_segundo_semestre = float(estudiante.get('Curricular units 2nd sem (approved)', 0))
         if aprobadas_segundo_semestre == 0:
@@ -119,7 +98,6 @@ def extraer_items_estudiante_apriori(estudiante, incluir_target=False):
 
 
 def discretizar_para_apriori(lista_estudiantes):
-    """Convierte la lista de estudiantes en una lista de transacciones (conjuntos de ítems)."""
     transacciones = []
     for estudiante in lista_estudiantes:
         items = extraer_items_estudiante_apriori(estudiante, incluir_target=False)
@@ -128,12 +106,10 @@ def discretizar_para_apriori(lista_estudiantes):
 
 
 def extraer_nombre_atributo(item):
-    """Extrae el nombre de la variable antes del igual (ej. 'Tiene_Deudas=1' -> 'Tiene_Deudas')."""
     return item.split('=')[0]
 
 
 def tiene_contradiccion(conjunto_items):
-    """Verifica que un ítem-set no contenga dos valores diferentes del mismo atributo."""
     atributos_vistos = set()
     for item in conjunto_items:
         atributo = extraer_nombre_atributo(item)
@@ -144,7 +120,6 @@ def tiene_contradiccion(conjunto_items):
 
 
 def calcular_cobertura(itemset, transacciones):
-    """Cuenta cuántas transacciones contienen el conjunto de ítems."""
     conteo = 0
     for t in transacciones:
         if itemset.issubset(t):
@@ -153,7 +128,6 @@ def calcular_cobertura(itemset, transacciones):
 
 
 def generar_combinaciones(elementos, r):
-    """Genera combinaciones de tamaño r sin itertools."""
     elem = list(elementos)
     n = len(elem)
     if r == 1:
@@ -166,27 +140,17 @@ def generar_combinaciones(elementos, r):
 
 
 def ejecutar_apriori(datos_entrenamiento, soporte_minimo=0.25, confianza_minima=0.70, max_reglas=15):
-    """
-    Ejecuta el Algoritmo Apriori estructurado exactamente por Fases:
-      - Encabezado formal
-      - FASE 0: Cobertura Mínima
-      - FASE 1: Generación y Poda de Ítem-Sets Frecuentes (k = 1, 2, 3) con Tablas
-      - FASE 2: Extracción y Evaluación de Reglas de Asociación con Tablas
-      - Resumen de Mejores Reglas
-    """
     N = len(datos_entrenamiento)
     cobertura_minima = math.ceil(N * soporte_minimo)
 
     transacciones = discretizar_para_apriori(datos_entrenamiento)
 
-    # Identificar todos los ítems únicos disponibles
     todos_items_posibles = set()
     for t in transacciones:
         todos_items_posibles.update(t)
 
     lineas_salida = []
 
-    # ENCABEZADO FORMAL
     encabezado = "=" * 95 + "\n"
     encabezado += "         INFORME DE EJECUCIÓN: EXTRACCIÓN DE REGLAS DE ASOCIACIÓN (APRIORI)\n"
     encabezado += "                  Análisis Paso a Paso de Frecuencia y Confianza\n"
@@ -200,7 +164,7 @@ def ejecutar_apriori(datos_entrenamiento, soporte_minimo=0.25, confianza_minima=
     lineas_salida.append(encabezado)
     print(encabezado)
 
-    # FASE 0: DETERMINANDO LA COBERTURA MÍNIMA
+    # FASE 0: Cobertura mínima
     fase0 = "\n" + "=" * 95 + "\n"
     fase0 += "             FASE 0: DETERMINANDO LA COBERTURA MÍNIMA\n"
     fase0 += "=" * 95 + "\n"
@@ -212,7 +176,7 @@ def ejecutar_apriori(datos_entrenamiento, soporte_minimo=0.25, confianza_minima=
     lineas_salida.append(fase0)
     print(fase0)
 
-    # FASE 1: GENERACIÓN Y PODA DE ÍTEM-SETS FRECUENTES
+    # FASE 1: Generación y poda de ítem-sets frecuentes
     fase1_encabezado = "\n" + "=" * 95 + "\n"
     fase1_encabezado += "         FASE 1: GENERACIÓN Y PODA DE ÍTEM-SETS FRECUENTES (k = 1, 2, 3)\n"
     fase1_encabezado += "=" * 95 + "\n"
@@ -222,7 +186,6 @@ def ejecutar_apriori(datos_entrenamiento, soporte_minimo=0.25, confianza_minima=
     itemsets_frecuentes_por_nivel = {}
     reporte_fase1 = {}
 
-    # Nivel k = 1
     itemsets_k1 = {}
     reporte_k1 = []
     conteo_items = {}
@@ -246,7 +209,6 @@ def ejecutar_apriori(datos_entrenamiento, soporte_minimo=0.25, confianza_minima=
     itemsets_frecuentes_por_nivel[1] = itemsets_k1
     reporte_fase1[1] = sorted(reporte_k1, key=lambda x: x['cobertura'], reverse=True)
 
-    # Nivel k = 2 y k = 3
     items_aprobados_k1 = list(itemsets_k1.keys())
 
     for k in [2, 3]:
@@ -264,7 +226,6 @@ def ejecutar_apriori(datos_entrenamiento, soporte_minimo=0.25, confianza_minima=
                 for j in range(i + 1, len(prev_k2)):
                     union_set = prev_k2[i] | prev_k2[j]
                     if len(union_set) == 3 and not tiene_contradiccion(union_set):
-                        # Poda apriori: todos los subconjuntos de 2 deben estar en L2
                         items_lista = list(union_set)
                         todos_frec = True
                         for idx_sub in range(3):
@@ -295,7 +256,6 @@ def ejecutar_apriori(datos_entrenamiento, soporte_minimo=0.25, confianza_minima=
         reporte_fase1[k] = sorted(reporte_k, key=lambda x: x['cobertura'], reverse=True)
         itemsets_frecuentes_por_nivel[k] = itemsets_k
 
-    # Imprimir tablas de Fase 1 para k = 1, 2, 3 (MOSTRANDO TODOS LOS ÍTEM-SETS ANALIZADOS)
     for nivel in [1, 2, 3]:
         rep = reporte_fase1.get(nivel, [])
         aprobados_c = sum(1 for x in rep if x['estado'] == "APROBADO")
@@ -329,7 +289,7 @@ def ejecutar_apriori(datos_entrenamiento, soporte_minimo=0.25, confianza_minima=
         lineas_salida.append(bloque_k)
         print(bloque_k)
 
-    # FASE 2: REGLAS DE ASOCIACIÓN
+    # FASE 2: Extracción y evaluación de reglas de asociación
     reglas_evaluadas = []
 
     for nivel in [2, 3]:
@@ -343,7 +303,6 @@ def ejecutar_apriori(datos_entrenamiento, soporte_minimo=0.25, confianza_minima=
                     if len(consecuente) == 0:
                         continue
 
-                    # Cobertura del antecedente
                     cob_ant = calcular_cobertura(antecedente, transacciones)
                     confianza = cob_conjunta / cob_ant if cob_ant > 0 else 0.0
                     aprobado = (confianza >= confianza_minima)
@@ -366,7 +325,6 @@ def ejecutar_apriori(datos_entrenamiento, soporte_minimo=0.25, confianza_minima=
                         'estado': "VÁLIDA" if aprobado else "DESCARTADA"
                     })
 
-    # Ordenar reglas por confianza y cobertura conjunta
     reglas_evaluadas.sort(
         key=lambda r: (round(r['confianza'], 6), r['cobertura_conjunta']),
         reverse=True
@@ -396,7 +354,6 @@ def ejecutar_apriori(datos_entrenamiento, soporte_minimo=0.25, confianza_minima=
     tabla_reglas += "-" * ancho_tabla_r + "\n"
 
     cuerpo_reglas = ""
-    # Mostrar todas las reglas evaluadas en su totalidad sin ningún truncamiento
     for idx, r in enumerate(reglas_evaluadas, 1):
         marca = " [X]" if r['aprobado'] else "    "
         cuerpo_reglas += f"{idx:<4}{marca}| {r['texto_regla']:<{ancho_col_regla}} | {r['cobertura_conjunta']:<6} | {r['cobertura_antecedente']:<6} | {r['confianza']:<10.6f} | {r['estado']:<12} |\n"
@@ -407,7 +364,6 @@ def ejecutar_apriori(datos_entrenamiento, soporte_minimo=0.25, confianza_minima=
     lineas_salida.append(bloque_fase2)
     print(bloque_fase2)
 
-    # RESUMEN FINAL: EL PRODUCTO FINAL Y ANÁLISIS DE SENSIBILIDAD
     reglas_perfectas = [r for r in reglas_validas if round(r['confianza'], 4) >= 1.0]
     reglas_altas = [r for r in reglas_validas if round(r['confianza'], 4) < 1.0]
 
@@ -438,7 +394,6 @@ def ejecutar_apriori(datos_entrenamiento, soporte_minimo=0.25, confianza_minima=
 
     salida_texto_completa = "".join(lineas_salida)
 
-    # Eliminar duplicados conservando el formato para el sistema híbrido
     reglas_unicas = []
     pares_vistos = set()
     for r in reglas_validas:

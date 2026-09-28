@@ -1,31 +1,13 @@
-# =============================================================================
-#  PROYECTO PRIMER PARCIAL: SISTEMA HÍBRIDO DE INTELIGENCIA ARTIFICIAL
-#  Predicción y Diagnóstico Explicable de Deserción Estudiantil
-#  Dataset: UCI Predict Students' Dropout and Academic Success (ID: 697)
-# =============================================================================
-#  MÓDULOS DEL PROYECTO:
-#   - datos.py        : Carga del dataset CSV y partición 80% entrenamiento / 20% prueba
-#   - difuso.py       : Lógica Difusa Mamdani (Fuzzificación, Reglas y Centroide)
-#   - prism.py        : Inducción de Reglas PRISM (Empíricas Difusas + Causales de Deserción)
-#   - apriori.py      : Minería de Reglas de Asociación No Supervisada
-#   - genetico.py     : Algoritmo Genético para calibrar las Funciones de Pertenencia
-#   - diagnostico.py  : Diagnóstico Explicable (XAI) y Evaluación Final en Prueba
-#
-#  Librerías estándar: csv, math, random, time, os, sys (100% Python estándar, sin librerías externas)
-# =============================================================================
-
 import os
 import sys
 import time
 
-# Configuración UTF-8 para consola de Windows
 if hasattr(sys.stdout, 'reconfigure'):
     try:
         sys.stdout.reconfigure(encoding='utf-8')
     except Exception:
         pass
 
-# Importación de los módulos del proyecto
 from datos import (
     cargar_dataset,
     partir_dataset
@@ -71,7 +53,6 @@ from diagnostico import (
 
 
 def pausar(mensaje=""):
-    """Pausa interactiva si se ejecuta en una terminal abierta, para poder leer paso a paso."""
     if sys.stdin.isatty():
         try:
             input(mensaje)
@@ -88,9 +69,7 @@ def main():
     print("  Dataset: UCI Machine Learning Repository (ID 697)")
     print("=" * 70)
 
-    # -------------------------------------------------------------------------
-    # PASO 1: Carga del dataset y división de datos
-    # -------------------------------------------------------------------------
+    # PASO 1: Carga y partición de datos
     print("\n" + "=" * 70)
     print("  PASO 1: CARGA DE DATOS Y PARTICIÓN")
     print("=" * 70)
@@ -106,7 +85,6 @@ def main():
     total_cargados = len(lista_estudiantes)
     print(f"\n  Total de estudiantes leídos del CSV: {total_cargados}")
 
-    # Contar cuántos estudiantes hay por cada clase
     conteo_clases = {}
     for estudiante in lista_estudiantes:
         clase_estudiante = estudiante.get('Target', '?')
@@ -122,17 +100,13 @@ def main():
 
     pausar("\n  Presiona ENTER para iniciar la inducción de reglas con PRISM...")
 
-    # -------------------------------------------------------------------------
-    # PASO 2: Algoritmo PRISM
-    # -------------------------------------------------------------------------
-    # 2A: Inducir empíricamente las reglas cuantitativas para el motor difuso
+    # PASO 2: Inducción de reglas PRISM
     reglas_difusas_inducidas, combinaciones_podadas, rep_difuso = inducir_reglas_difusas_con_prism(
         datos_entrenamiento, min_cobertura=15, imprimir=True
     )
 
     pausar("\n  Presiona ENTER para inducir la regla causal ganadora de PRISM...")
 
-    # 2B: Inducir regla causal paso a paso evaluando todas las 18 variables
     reglas_prism_causales, salida_prism = ejecutar_prism(
         datos_entrenamiento, clase_objetivo='Dropout', semilla=42
     )
@@ -140,18 +114,14 @@ def main():
 
     pausar("\n  Presiona ENTER para iniciar la minería de reglas con Apriori...")
 
-    # -------------------------------------------------------------------------
-    # PASO 3: Algoritmo Apriori (Minería de reglas de asociación no supervisada)
-    # -------------------------------------------------------------------------
+    # PASO 3: Minería de reglas Apriori
     reglas_apriori, _ = ejecutar_apriori(
         datos_entrenamiento, soporte_minimo=0.25, confianza_minima=0.70, max_reglas=12
     )
 
     pausar("\n  Presiona ENTER para iniciar el Algoritmo Genético...")
 
-    # -------------------------------------------------------------------------
-    # PASO 4: Algoritmo Genético (Calibra funciones de pertenencia difusas)
-    # -------------------------------------------------------------------------
+    # PASO 4: Algoritmo Genético
     print("\n  El Algoritmo Genético está optimizando los cortes de las funciones de pertenencia...")
     print("  (Esto toma alrededor de 1 minuto usando una muestra estratificada de 400 estudiantes)")
 
@@ -171,15 +141,12 @@ def main():
 
     pausar("\n  Presiona ENTER para ver los casos de diagnóstico explicable (XAI)...")
 
-    # -------------------------------------------------------------------------
-    # PASO 5: Diagnóstico Explicable Integral (XAI)
-    # -------------------------------------------------------------------------
+    # PASO 5: Diagnóstico Explicable (XAI)
     print("\n" + "=" * 70)
     print("  PASO 5: DIAGNÓSTICO EXPLICABLE INTEGRAL (XAI)")
     print("  (Cruce de Lógica Difusa + Reglas PRISM + Patrones Apriori)")
     print("=" * 70)
 
-    # Seleccionar 1 estudiante representativo de cada clase para demostrar la explicación
     estudiantes_ejemplo = {'Dropout': None, 'Graduate': None, 'Enrolled': None}
     for estudiante in datos_prueba:
         clase_target = estudiante.get('Target')
@@ -206,9 +173,7 @@ def main():
 
     pausar("\n  Presiona ENTER para la evaluación final en el conjunto de prueba...")
 
-    # -------------------------------------------------------------------------
-    # PASO 6: Evaluación final del Sistema Híbrido en los datos de prueba
-    # -------------------------------------------------------------------------
+    # PASO 6: Evaluación final en datos de prueba
     exactitud_final = evaluar_en_prueba(
         datos_prueba,
         parametros_calibrados,
@@ -216,7 +181,6 @@ def main():
         reglas_difusas=reglas_difusas_inducidas
     )
 
-    # Comparación de desempeño: Sin optimizar vs. Optimizado por el AG
     parametros_iniciales = obtener_parametros_iniciales()
     aciertos_iniciales = 0
 

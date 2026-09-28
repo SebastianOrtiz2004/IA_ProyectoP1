@@ -1,43 +1,22 @@
-# =============================================================================
-# ARCHIVO: difuso.py
-# Descripción: Lógica Difusa Mamdani paso a paso
-# Fases:
-#   1. Fuzzificación: Convertir valores numéricos reales en grados de pertenencia (0.0 a 1.0)
-#   2. Evaluación de Reglas: Operador Y (AND) usando el mínimo (min)
-#   3. Agregación: Operador O (OR) usando el máximo (max)
-#   4. Defuzzificación: Método del Centroide discreto para obtener el riesgo final
-# =============================================================================
-
 def pertenencia_trapezoidal(valor_x, a, b, c, d):
-    """
-    Función de pertenencia trapezoidal.
-    - Entre b y c la certeza es total (1.0).
-    - Menor que a o mayor que d está fuera (0.0).
-    - Entre a y b sube en rampa.
-    - Entre c y d baja en rampa.
-    """
     if a == b == c == d:
         if valor_x == a:
             return 1.0
         else:
             return 0.0
 
-    # Meseta superior (grado 1.0)
     if b <= valor_x <= c:
         return 1.0
 
-    # Fuera del soporte (grado 0.0)
     if valor_x <= a or valor_x >= d:
         return 0.0
 
-    # Rampa de subida
     if a < valor_x < b:
         if b != a:
             return (valor_x - a) / (b - a)
         else:
             return 1.0
 
-    # Rampa de bajada
     if c < valor_x < d:
         if d != c:
             return (d - valor_x) / (d - c)
@@ -48,11 +27,6 @@ def pertenencia_trapezoidal(valor_x, a, b, c, d):
 
 
 def pertenencia_triangular(valor_x, a, b, c):
-    """
-    Función de pertenencia triangular.
-    - El pico máximo está exactamente en b (grado 1.0).
-    - Menor que a o mayor que c es 0.0.
-    """
     if b <= a or c <= b:
         return 0.0
 
@@ -68,13 +42,10 @@ def pertenencia_triangular(valor_x, a, b, c):
     return 0.0
 
 
+# FASE 1: Fuzzificación
 def fuzzificar_entrada(nota_admision, materias_aprobadas, promedio_notas, parametros):
-    """
-    Convierte las 3 notas reales del estudiante a grados lingüísticos difusos.
-    """
     grados_de_pertenencia = {}
 
-    # Variable 1: Nota de admisión (escala 0 a 200)
     p_baja = parametros['nota_adm_baja']
     p_media = parametros['nota_adm_media']
     p_alta = parametros['nota_adm_alta']
@@ -83,7 +54,6 @@ def fuzzificar_entrada(nota_admision, materias_aprobadas, promedio_notas, parame
     grados_de_pertenencia['X1_Media'] = pertenencia_triangular(nota_admision, p_media[0], p_media[1], p_media[2])
     grados_de_pertenencia['X1_Alta'] = pertenencia_trapezoidal(nota_admision, p_alta[0], p_alta[1], p_alta[2], p_alta[3])
 
-    # Variable 2: Materias aprobadas en primer semestre (0 a 26)
     c_critica = parametros['aprobadas_critica']
     c_regular = parametros['aprobadas_regular']
     c_completa = parametros['aprobadas_completa']
@@ -92,7 +62,6 @@ def fuzzificar_entrada(nota_admision, materias_aprobadas, promedio_notas, parame
     grados_de_pertenencia['X2_Regular'] = pertenencia_triangular(materias_aprobadas, c_regular[0], c_regular[1], c_regular[2])
     grados_de_pertenencia['X2_Completa'] = pertenencia_trapezoidal(materias_aprobadas, c_completa[0], c_completa[1], c_completa[2], c_completa[3])
 
-    # Variable 3: Promedio de notas en primer semestre (0 a 20)
     n_deficiente = parametros['nota_sem_deficiente']
     n_aceptable = parametros['nota_sem_aceptable']
     n_sobresaliente = parametros['nota_sem_sobresaliente']
@@ -104,21 +73,17 @@ def fuzzificar_entrada(nota_admision, materias_aprobadas, promedio_notas, parame
     return grados_de_pertenencia
 
 
-# Base de reglas difusas por defecto (referencia si no se pasan reglas de PRISM)
 REGLAS_DIFUSAS = [
-    # Riesgo Alto (deserción muy probable)
     (['X1_Baja', 'X2_Critica'],                       'Riesgo_Alto'),
     (['X2_Critica', 'X3_Deficiente'],                  'Riesgo_Alto'),
     (['X1_Baja', 'X3_Deficiente'],                     'Riesgo_Alto'),
     (['X1_Media', 'X2_Critica'],                       'Riesgo_Alto'),
     (['X1_Alta', 'X2_Critica', 'X3_Deficiente'],       'Riesgo_Alto'),
-    # Riesgo Medio (alerta moderada)
     (['X1_Media', 'X2_Regular'],                       'Riesgo_Medio'),
     (['X2_Regular', 'X3_Aceptable'],                   'Riesgo_Medio'),
     (['X3_Deficiente', 'X2_Regular'],                  'Riesgo_Medio'),
     (['X1_Media', 'X3_Aceptable'],                     'Riesgo_Medio'),
     (['X1_Baja', 'X2_Regular'],                        'Riesgo_Medio'),
-    # Riesgo Bajo (buen desempeño académico)
     (['X2_Completa', 'X3_Sobresaliente'],              'Riesgo_Bajo'),
     (['X1_Alta', 'X2_Completa'],                       'Riesgo_Bajo'),
     (['X1_Alta', 'X2_Regular', 'X3_Sobresaliente'],    'Riesgo_Bajo'),
@@ -130,20 +95,13 @@ REGLAS_DIFUSAS = [
 
 
 def evaluar_motor_difuso(nota_admision, materias_aprobadas, promedio_notas, parametros, numero_puntos=200, reglas=None):
-    """
-    Ejecuta el sistema difuso Mamdani completo para un estudiante:
-      Paso 1: Fuzzificación
-      Paso 2: Inferencia de reglas (mínimo)
-      Paso 3: Agregación de consecuentes (máximo)
-      Paso 4: Defuzzificación por Centroide para calcular el valor numérico de riesgo [0 a 1]
-    """
     if reglas is None:
         reglas = REGLAS_DIFUSAS
 
     # FASE 1: Fuzzificación
     grados_pertenencia = fuzzificar_entrada(nota_admision, materias_aprobadas, promedio_notas, parametros)
 
-    # FASE 2: Inferencia con reglas (operador AND = mínimo)
+    # FASE 2: Inferencia de reglas
     fuerzas_activacion = {
         'Riesgo_Bajo': 0.0,
         'Riesgo_Medio': 0.0,
@@ -160,11 +118,11 @@ def evaluar_motor_difuso(nota_admision, materias_aprobadas, promedio_notas, para
 
         detalle_reglas.append((condiciones_antecedente, consecuente, fuerza_regla))
 
-        # FASE 3: Agregación (operador OR = máximo)
+        # FASE 3: Agregación
         if fuerza_regla > fuerzas_activacion[consecuente]:
             fuerzas_activacion[consecuente] = fuerza_regla
 
-    # FASE 4: Defuzzificación mediante Centroide discreto
+    # FASE 4: Defuzzificación
     paso = 1.0 / numero_puntos
     suma_numerador_centroide = 0.0
     suma_denominador_centroide = 0.0
@@ -218,19 +176,11 @@ def evaluar_motor_difuso(nota_admision, materias_aprobadas, promedio_notas, para
 
 
 def barra_grado(grado, ancho=12):
-    """Genera una barra de caracteres para representar visualmente el grado de pertenencia."""
     llenos = int(round(grado * ancho))
     return "#" * llenos + "-" * (ancho - llenos)
 
 
 def describir_los_4_pasos_difusos(nota_admision, materias_aprobadas, promedio_notas, parametros, detalle_motor=None, reglas=None):
-    """
-    Genera el desglose exhaustivo y pedagógico de los 4 PASOS CANÓNICOS de la Lógica Difusa Mamdani:
-      Paso 1: Fuzzificación (Entrada continua -> Grados de pertenencia mu en [0, 1]).
-      Paso 2: Evaluación de Reglas e Inferencia Mamdani (Operador T-norma = MÍNIMO).
-      Paso 3: Agregación de Consecuentes (Operador S-norma = MÁXIMO).
-      Paso 4: Defuzzificación por Centro de Gravedad (Centroide discreto).
-    """
     if detalle_motor is None:
         riesgo_calc, detalle = evaluar_motor_difuso(
             nota_admision, materias_aprobadas, promedio_notas, parametros,
@@ -246,7 +196,6 @@ def describir_los_4_pasos_difusos(nota_admision, materias_aprobadas, promedio_no
     num = detalle.get('suma_numerador', 0.0)
     den = detalle.get('suma_denominador', 0.0)
 
-    # Identificar reglas activadas
     reglas_activas = [r for r in detalle_reglas if r[2] > 0.0001]
     reglas_activas.sort(key=lambda r: r[2], reverse=True)
 
@@ -255,7 +204,6 @@ def describir_los_4_pasos_difusos(nota_admision, materias_aprobadas, promedio_no
     lineas.append("        DESGLOSE METODOLÓGICO: LOS 4 PASOS FUNDAMENTALES DEL MOTOR DIFUSO MAMDANI")
     lineas.append("=" * 95)
 
-    # PASO 1: FUZZIFICACIÓN
     lineas.append("\n[PASO 1: FUZZIFICACIÓN DE LAS VARIABLES NUMÉRICAS DE ENTRADA]")
     lineas.append("-" * 95)
     lineas.append("  Traduce las mediciones reales del estudiante a grados de membresía lingüística μ ∈ [0.0, 1.0]:\n")
@@ -284,7 +232,6 @@ def describir_los_4_pasos_difusos(nota_admision, materias_aprobadas, promedio_no
     lineas.append(f"      - Conjunto 'Aceptable'     (Triángulo [{n_acep[0]:.1f}, {n_acep[1]:.1f}, {n_acep[2]:.1f}]):       μ = {grados['X3_Aceptable']:.3f} [{barra_grado(grados['X3_Aceptable'])}]")
     lineas.append(f"      - Conjunto 'Sobresaliente' (Trapecio [{n_sob[0]:.1f}, {n_sob[1]:.1f}, {n_sob[2]:.1f}, {n_sob[3]:.1f}]): μ = {grados['X3_Sobresaliente']:.3f} [{barra_grado(grados['X3_Sobresaliente'])}]")
 
-    # PASO 2: EVALUACIÓN DE REGLAS E INFERENCIA MAMDANI
     lineas.append("\n[PASO 2: EVALUACIÓN DE REGLAS E INFERENCIA MAMDANI (OPERADOR T-NORMA = MÍNIMO)]")
     lineas.append("-" * 95)
     lineas.append("  Para cada regla 'SI A AND B ENTONCES C', se evalúa la conjunción usando el operador MÍNIMO:")
@@ -301,7 +248,6 @@ def describir_los_4_pasos_difusos(nota_admision, materias_aprobadas, promedio_no
     else:
         lineas.append("    (Ninguna regla cuantitativa superó el umbral de activación mínima; se activa regla neutral).")
 
-    # PASO 3: AGREGACIÓN DE CONSECUENTES
     lineas.append("\n[PASO 3: AGREGACIÓN DE CONSECUENTES (OPERADOR S-NORMA = MÁXIMO)]")
     lineas.append("-" * 95)
     lineas.append("  Combina las conclusiones de todas las reglas activadas agrupándolas por su consecuente:")
@@ -312,7 +258,6 @@ def describir_los_4_pasos_difusos(nota_admision, materias_aprobadas, promedio_no
     lineas.append("  Interpretación geométrica: Cada conjunto difuso de salida es truncado en su meseta superior")
     lineas.append("  al nivel α_max correspondiente y unido con el operador MÁXIMO, formando la curva difusa combinada.")
 
-    # PASO 4: DEFUZZIFICACIÓN POR CENTROIDE
     lineas.append("\n[PASO 4: DEFUZZIFICACIÓN POR EL MÉTODO DEL CENTROIDE (CENTRO DE GRAVEDAD - COG)]")
     lineas.append("-" * 95)
     lineas.append("  Convierte el área difusa agregada en un único valor numérico puntual (crisp) de riesgo:")
@@ -336,4 +281,3 @@ def describir_los_4_pasos_difusos(nota_admision, materias_aprobadas, promedio_no
     lineas.append("=" * 95 + "\n")
 
     return "\n".join(lineas)
-
